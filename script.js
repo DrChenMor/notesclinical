@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDraftButton = document.getElementById('loadDraftButton');
     const clearFormButton = document.getElementById('clearFormButton');
     const resetNoteButton = document.getElementById('resetNoteButton');
-    const clearActiveFieldButton = document.getElementById('clearActiveFieldButton');
+    // const clearActiveFieldButton = document.getElementById('clearActiveFieldButton'); // REMOVED
     const toastMessage = document.getElementById('toast-message');
     const newSectionNameInput = document.getElementById('newSectionNameInput');
     const addNewSectionButton = document.getElementById('addNewSectionButton');
@@ -37,15 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeTextarea = null;
     let toastTimeout; 
 
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v6';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v6';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v6';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v6';
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v7';
+    const UI_SETTINGS_KEY = 'noteinghamUISettings_v7';
+    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v7';
+    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v7';
 
     let masterFieldData = {}; 
     let masterSectionData = [];
 
-    const standardSections = [ /* ... Full standardSections array as previously provided ... */ 
+    const standardSections = [ /* ... Full standardSections array ... */ 
         { id: 'generalInfoSection', title: 'General Information', fields: [
             { id: 'gi_date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD', suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "] },
             { id: 'gi_client_id', label: 'Client ID / Name', type: 'text', placeholder: 'e.g., 12345 or Initials', suggestions: ["Client ID: ", "Client Initials: "] },
@@ -72,59 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'p_safety_referrals_appt', label: "Safety Planning, Referrals, Next Appointment", type: 'textarea', placeholder: "e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD.", suggestions: ["Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].", "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].", "Client to follow up with [specialist/service].", "Next appointment scheduled for [date] at [time].", "Continue weekly/bi-weekly sessions."] }
         ]}
     ];
-
-    // All other JavaScript functions (generateUniqueId, showToast, template management, form rendering, downloads, suggestions, etc.)
-    // remain the same as in the previous FULL CORRECTED JavaScript.
-    // The key change is in `setupHelperPanelTabs` and ensuring event listeners are correctly attached to the new tab buttons.
-
-    function setupHelperPanelTabs() {
-        const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); // Filter out null if an ID is wrong
-        const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
-
-        if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
-            console.error("Helper panel tab buttons or content not found or mismatch.");
-            return;
-        }
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Deactivate all tabs
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('active-tab', 'border-sky-500', 'text-sky-600');
-                    btn.classList.add('border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300');
-                });
-                tabContents.forEach(content => {
-                    content.classList.remove('active');
-                });
-
-                // Activate clicked tab
-                button.classList.add('active-tab', 'border-sky-500', 'text-sky-600');
-                button.classList.remove('border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300');
-                
-                const targetContentId = button.dataset.tabTarget;
-                const targetContentElement = document.getElementById(targetContentId);
-                if (targetContentElement) {
-                    targetContentElement.classList.add('active');
-                } else {
-                    console.error(`Target content not found for tab: ${targetContentId}`);
-                }
-            });
-        });
-
-        // Ensure default active tab is set if specified in HTML or default to suggestions
-        let activeTabSet = false;
-        tabButtons.forEach(button => {
-            if (button.classList.contains('active-tab')) {
-                const targetContentElement = document.getElementById(button.dataset.tabTarget);
-                if (targetContentElement) targetContentElement.classList.add('active');
-                activeTabSet = true;
-            }
-        });
-        if (!activeTabSet && suggestionsHelperTabButton) {
-            suggestionsHelperTabButton.click(); // Default to suggestions tab
-        }
-    }
-
 
     // --- Helper Functions (Full Code) ---
     function generateUniqueId(prefix = 'id_') { 
@@ -202,28 +149,34 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionMeta.fieldIds.forEach((fieldId) => {
                 const field = masterFieldData[fieldId];
                 if (!field) { console.warn(`Field data missing: ${fieldId}`); return; }
-                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field';
+                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field'; // Base class
                 let addedToGrid = false;
+                // --- Grid Logic ---
                 if (sectionMeta.id === 'generalInfoSection' && field.type === 'text' && fieldCountInGrid < 2) {
                     if (!currentGridDiv) {
                         currentGridDiv = document.createElement('div'); currentGridDiv.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
                         const h3El = sectionElement.querySelector('h3'); sectionElement.insertBefore(currentGridDiv, h3El.nextElementSibling);
                     }
-                    currentGridDiv.appendChild(formFieldDiv); fieldCountInGrid++; addedToGrid = true;
+                    currentGridDiv.appendChild(formFieldDiv); // Add the field div to the grid
+                    fieldCountInGrid++; addedToGrid = true;
                 } else {
-                    const isFirstFieldInNonGrid = sectionElement.querySelectorAll('.form-field').length === 0 && !currentGridDiv;
-                     if (!isFirstFieldInNonGrid && ! (sectionElement.lastChild === currentGridDiv && currentGridDiv && currentGridDiv.contains(formFieldDiv)) ) {
+                    // If not in grid, add margin-top if it's not the very first field element added to the section
+                     if (sectionElement.querySelectorAll('.form-field, .grid').length > 1) { // Check if more than just h3 exists
                          formFieldDiv.classList.add('mt-4');
-                    }
+                     }
                     sectionElement.appendChild(formFieldDiv);
                 }
+                // --- Label ---
                 const labelEl = document.createElement('label');
                 labelEl.htmlFor = fieldId; labelEl.textContent = field.label; formFieldDiv.appendChild(labelEl);
+                // --- Input/Textarea ---
                 let inputEl;
                 if (field.type === 'textarea') inputEl = document.createElement('textarea');
                 else { inputEl = document.createElement('input'); inputEl.type = 'text'; }
                 inputEl.id = fieldId; inputEl.name = fieldId; inputEl.placeholder = field.placeholder;
-                inputEl.classList.add('form-input'); formFieldDiv.appendChild(inputEl);
+                inputEl.classList.add('form-input'); // Add base input styling class
+                 // Add density-specific padding/height later via applyUISettings or keep base style
+                formFieldDiv.appendChild(inputEl);
                 inputEl.addEventListener('focus', () => {
                     activeTextarea = inputEl; updateHelperPanel(fieldId);
                     if (customSuggestionModule) customSuggestionModule.style.display = 'block';
@@ -288,6 +241,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- Helper Panel Tab Navigation (Full Code) ---
+    function setupHelperPanelTabs() {
+        const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); 
+        const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
+        if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
+            console.error("Helper panel tab buttons or content not found/mismatch."); return;
+        }
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Deactivate others
+                tabButtons.forEach(btn => btn.classList.remove('active-tab', 'border-sky-500', 'text-sky-600'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                // Activate clicked
+                button.classList.add('active-tab', 'border-sky-500', 'text-sky-600');
+                const targetContentId = button.dataset.tabTarget;
+                const targetContentElement = document.getElementById(targetContentId);
+                if (targetContentElement) targetContentElement.classList.add('active');
+                else console.error(`Target content not found: ${targetContentId}`);
+            });
+        });
+        // Set initial active tab (assuming first one has 'active-tab' in HTML)
+         let activeTabFound = false;
+         tabButtons.forEach(button => {
+             if(button.classList.contains('active-tab')) {
+                 const targetContentElement = document.getElementById(button.dataset.tabTarget);
+                 if (targetContentElement) targetContentElement.classList.add('active');
+                 activeTabFound = true;
+             }
+         });
+         // Fallback if no tab is initially active
+         if(!activeTabFound && suggestionsHelperTabButton) {
+             suggestionsHelperTabButton.click();
+         }
+    }
+
     // --- Download/Upload & Draft Management (Full Code) ---
     function generateFilename(baseName, extension) { 
         const dateEl = document.getElementById('gi_date'); const clientIdEl = document.getElementById('gi_client_id');
@@ -385,15 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { showToast("Suggestion exists.", "info"); }
         });
     }
-    if (clearActiveFieldButton) { 
-        clearActiveFieldButton.addEventListener('click', () => {
-            if (activeTextarea) {
-                activeTextarea.value = '';
-                showToast(`Field "${masterFieldData[activeTextarea.id]?.label || 'Current'}" cleared.`, 'info');
-                activeTextarea.focus();
-            } else { showToast('No field active.', 'info'); }
-        });
-    }
+    // Removed Clear Active Field Button Listener
+    
     function updateHelperPanel(fieldId) { 
         const fieldMeta = masterFieldData[fieldId];
         if (!fieldMeta || !helperPanelSubtitle || !suggestionsContainer) return;
@@ -512,11 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = loadUISettings();
         document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
         document.body.classList.add(`layout-${settings.layout || 'normal'}`);
-        document.querySelectorAll('.btn-density').forEach(btn => { // Adjusted selector for density buttons in top bar
-            btn.classList.remove('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600', 'active');
-            btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'); // Default outline style
+        document.querySelectorAll('.top-controls-bar .btn-density').forEach(btn => { // Target density buttons in top bar
+            btn.classList.remove('active', 'bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
+            btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'); 
             if (btn.dataset.density === (settings.layout || 'normal')) {
-                btn.classList.add('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600', 'active');
+                btn.classList.add('active', 'bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
                 btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
             }
         });
@@ -528,6 +509,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkbox) checkbox.checked = !!isVisible; 
             });
         }
+         // Adjust input/textarea padding based on density (example)
+         document.querySelectorAll('.form-input').forEach(input => {
+            input.classList.remove('p-2', 'p-4', 'p-1'); // Remove old padding if necessary
+             if(settings.layout === 'compact') {
+                input.classList.add('p-1'); // Example compact padding
+             } else if (settings.layout === 'expanded') {
+                 input.classList.add('p-4'); // Example expanded padding
+             } else {
+                 input.classList.add('p-2'); // Normal padding ( Tailwind default for .form-input adjusted if needed)
+             }
+         });
     }
     function initSectionVisibilityControls() { 
         if (!visibleSectionsControlsContainer) return;
@@ -549,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     function initDensityControls() { 
-         document.querySelectorAll('.top-controls-bar .btn-density').forEach(button => { // More specific selector
+         document.querySelectorAll('.top-controls-bar .btn-density').forEach(button => { 
             button.addEventListener('click', () => {
                 saveUISetting('layout', button.dataset.density); applyUISettings();
             });
@@ -576,7 +568,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
     if (firstStandardFieldId) {
         const firstEl = document.getElementById(firstStandardFieldId);
-        if (firstEl) firstEl.focus(); 
+        // Don't auto-focus initially, let user click
+        // if (firstEl) firstEl.focus(); 
     }
     if (!activeTextarea && customSuggestionModule) {
         customSuggestionModule.style.display = 'none';
