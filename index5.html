@@ -8,9 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Base Styles from input_file_0.html (with minor tweaks) */
+        /* Base styles & Utilities */
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overscroll-behavior-y: none; }
-        .main-content-area { height: calc(100vh - 128px - 50px); /* Header - Footer - TopControlsBar approx height */ }
+        .main-content-area { height: calc(100vh - 128px - 50px); } /* Header - Footer - TopControlsBar approx height */
         .top-controls-bar { background-color: white; padding: 0.5rem 1rem; margin-bottom:1rem; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
         
         .form-section { background-color: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); margin-bottom: 1.5rem; transition: padding 0.3s ease, margin-bottom 0.3s ease; position: relative; }
@@ -20,20 +20,25 @@
         .delete-section-btn:hover { color: #dc2626; }
         
         .form-field label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: #334155; transition: font-size 0.3s ease; }
-        /* Original Input Styling from input_file_0.html */
-        .form-field textarea, .form-field input[type="text"] { 
-            width: 100%; border: 1px solid #cbd5e1; border-radius: 0.375rem; 
-            padding: 0.75rem; font-size: 0.875rem; line-height: 1.5; 
-            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, min-height 0.3s ease, padding 0.3s ease, font-size 0.3s ease; 
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Subtle shadow */
-        }
-        .form-field textarea:focus, .form-field input[type="text"]:focus { 
-            border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); /* Adjusted focus shadow */
-            outline: none; 
-        }
-        .form-field textarea { min-height: 100px; resize: vertical; }
         
-        /* Helper Panel Base */
+        /* Base Input/Textarea styles using Tailwind's @apply for maintainability WITHIN the style block */
+         .form-input-base {
+             @apply block w-full border border-slate-300 rounded-md shadow-sm text-sm 
+                    focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
+                    disabled:opacity-50 disabled:cursor-not-allowed;
+         }
+         /* Base padding for normal density */
+        .form-input-base { @apply p-2; }
+        textarea.form-input-base { @apply min-h-[100px] resize-vertical py-2 px-3; } /* Adjusted padding for textarea */
+        input[type="text"].form-input-base { @apply py-2 px-3; }
+
+        /* Select specific style */
+         .form-select { 
+              @apply block w-full border border-slate-300 rounded-md p-2 text-sm 
+                     focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
+                     shadow-sm disabled:opacity-50 disabled:cursor-not-allowed; 
+         } 
+        
         .helper-panel { background-color: white; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
         
         .suggestion-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 0.625rem 1rem; font-size: 0.875rem; color: #334155; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.375rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -51,18 +56,18 @@
         .scrollable-panel::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px;}
         .scrollable-panel::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        /* Density specific styles targeting original selectors */
+        /* Density specific styles - Overriding base padding/min-height */
         .layout-compact .form-section { padding: 1rem; margin-bottom: 1rem; }
         .layout-compact .form-section h3 { font-size: 1.1rem; margin-bottom: 0.75rem; padding-bottom: 0.3rem; }
         .layout-compact .form-field label { font-size: 0.8rem; margin-bottom: 0.25rem; }
-        .layout-compact .form-field textarea, .layout-compact .form-field input[type="text"] { padding: 0.5rem; font-size: 0.8rem; }
-        .layout-compact .form-field textarea { min-height: 60px; }
+        .layout-compact .form-input-base { padding: 0.5rem; font-size: 0.8rem; } /* Compact padding */
+        .layout-compact textarea.form-input-base { min-height: 60px; }
         
         .layout-expanded .form-section { padding: 2rem; margin-bottom: 2rem; }
         .layout-expanded .form-section h3 { font-size: 1.4rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; }
         .layout-expanded .form-field label { font-size: 1rem; margin-bottom: 0.75rem; }
-        .layout-expanded .form-field textarea, .layout-expanded .form-field input[type="text"] { padding: 1rem; font-size: 0.95rem; }
-        .layout-expanded .form-field textarea { min-height: 150px; }
+        .layout-expanded .form-input-base { padding: 1rem; font-size: 0.95rem; } /* Expanded padding */
+        .layout-expanded textarea.form-input-base { min-height: 150px; }
         
         .hidden-section { display: none !important; }
         
@@ -78,14 +83,6 @@
         /* Tab Content Visibility */
         .tab-content { display: none; } 
         .tab-content.active { display: block; } 
-
-        /* Explicit Input/Select styling (can be adjusted) */
-        .form-input, .form-select { 
-            @apply block w-full border border-slate-300 rounded-md shadow-sm text-sm 
-                   focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
-                   disabled:opacity-50 disabled:cursor-not-allowed p-2; /* Base padding */
-        } 
-        textarea.form-input { min-height: 100px; resize: vertical; }
         
         /* Visible Sections Popover */
         #visibleSectionsPopover { display: none; position: absolute; background-color: white; border: 1px solid #e2e8f0; border-radius: 0.375rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); padding: 1rem; z-index: 50; min-width: 200px; right:0; margin-top: 0.25rem;}
@@ -93,7 +90,7 @@
 
     </style>
 </head>
-<body class="flex flex-col h-screen"> {/* Density classes added here */}
+<body class="flex flex-col h-screen">
 
     <header class="bg-sky-700 text-white p-4 shadow-lg flex-shrink-0">
         <div class="container mx-auto flex justify-between items-center">
@@ -101,7 +98,6 @@
                 <img src="logo_Noteingham.png" alt="NoteingHam Logo" class="h-12 w-12 mr-3">
                 <h1 class="text-2xl md:text-3xl font-bold">NoteingHam</h1>
             </div>
-            {/* Explicit button classes */}
             <button id="resetNoteButton" class="px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-sky-500 hover:bg-sky-400 text-white border border-sky-500 hover:border-sky-400">New Note / Reset</button>
         </div>
     </header>
@@ -110,7 +106,6 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-2">
                 <span class="text-sm font-medium text-slate-700">UI Density:</span>
-                {/* Explicit density button classes */}
                 <button data-density="compact" class="btn-density px-2 py-1 text-xs rounded-lg font-semibold shadow-sm transition-colors duration-150 ease-in-out border bg-white border-slate-300 text-slate-700 hover:bg-slate-50">Compact</button>
                 <button data-density="normal" class="btn-density px-2 py-1 text-xs rounded-lg font-semibold shadow-sm transition-colors duration-150 ease-in-out border active bg-sky-600 text-white hover:bg-sky-700 border-sky-600">Normal</button>
                 <button data-density="expanded" class="btn-density px-2 py-1 text-xs rounded-lg font-semibold shadow-sm transition-colors duration-150 ease-in-out border bg-white border-slate-300 text-slate-700 hover:bg-slate-50">Expanded</button>
@@ -135,23 +130,20 @@
                 </form>
             </div>
 
-             {/* Helper Panel Column - structure for internal scrolling */}
-            <aside class="md:col-span-1 h-full flex flex-col helper-panel"> {/* Flex Col + H-Full ARE CRITICAL */}
+             <!-- Helper Panel Column - Flex structure for internal scrolling -->
+            <aside class="md:col-span-1 h-full flex flex-col helper-panel"> 
                 
-                {/* Header - Fixed */}
                 <div class="p-4 border-b border-slate-200 flex-shrink-0"> 
                     <h2 id="helperPanelTitle" class="text-lg font-semibold text-sky-600">Note Helper</h2>
                     <p id="helperPanelSubtitle" class="text-xs text-slate-500">Select a field for suggestions</p>
                 </div>
 
-                {/* Tab Navigation - Fixed */}
                 <div class="flex border-b border-slate-200 flex-shrink-0"> 
                     <button id="suggestionsHelperTabButton" data-tab-target="suggestionsHelperTabContent" class="helper-tab-button active-tab">Suggestions</button>
                     <button id="templateEditorHelperTabButton" data-tab-target="templateEditorHelperTabContent" class="helper-tab-button">Customize Template</button>
                 </div>
                 
-                {/* Scrollable Content Area */}
-                {/* This div MUST have flex-grow, overflow-auto, and min-height: 0 */}
+                <!-- Scrollable Content Area -->
                 <div class="flex-grow overflow-y-auto scrollable-panel p-4" style="min-height: 0;"> 
                     <div id="suggestionsHelperTabContent" class="tab-content active">
                         <div id="suggestionsContainer" class="mb-4">
@@ -159,8 +151,7 @@
                         </div>
                         <div id="customSuggestionModule" style="display: none;" class="mb-4 pt-4 border-t border-slate-200">
                             <h3 id="addCustomSuggestionTitle" class="text-md font-semibold mb-2 text-sky-600">Add Custom Suggestion</h3>
-                            <textarea id="customSuggestionInput" class="form-input" rows="2" placeholder="Type your suggestion..."></textarea>
-                             {/* Explicit button classes */}
+                            <textarea id="customSuggestionInput" class="form-input-base" rows="2" placeholder="Type your suggestion..."></textarea>
                             <button id="addCustomSuggestionButton" class="w-full mt-2 px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-sky-600 hover:bg-sky-700 text-white border border-sky-600 hover:border-sky-700">Add for this field</button>
                         </div>
                     </div>
@@ -169,7 +160,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label for="newSectionNameInput" class="block font-medium text-sm text-slate-700 mb-1">New Section Title:</label>
-                                <input type="text" id="newSectionNameInput" class="form-input" placeholder="e.g., Other Notes">
+                                <input type="text" id="newSectionNameInput" class="form-input-base" placeholder="e.g., Other Notes">
                                 <button id="addNewSectionButton" class="w-full mt-2 px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-sky-600 hover:bg-sky-700 text-white border border-sky-600 hover:border-sky-700">Add Section</button>
                             </div>
                             <div class="pt-4 border-t border-slate-200">
@@ -178,20 +169,19 @@
                                     <!-- Options populated by JS -->
                                 </select>
                                 <label for="newFieldNameInput" class="block font-medium text-sm text-slate-700 mb-1">New Field Label:</label>
-                                <input type="text" id="newFieldNameInput" class="form-input" placeholder="e.g., Follow-up Actions">
+                                <input type="text" id="newFieldNameInput" class="form-input-base" placeholder="e.g., Follow-up Actions">
                                 <button id="addNewFieldButton" class="w-full mt-2 px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-sky-600 hover:bg-sky-700 text-white border border-sky-600 hover:border-sky-700">Add Field</button>
                             </div>
                         </div>
                     </div>
                 </div>
-                {/* Removed Clear Current Field Button */}
+                <!-- Removed Clear Current Field Button's container -->
             </aside>
         </div>
     </div>
 
     <footer class="bg-white shadow-upward p-3 border-t border-slate-200 flex-shrink-0"> 
         <div class="container mx-auto flex flex-wrap justify-center md:justify-end items-center gap-2 md:gap-3">
-            {/* Explicit Footer Button classes */}
             <button id="downloadNoteButton" class="px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 hover:border-emerald-700">Download Note (.doc)</button>
             <button id="downloadDraftButton" class="px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-amber-500 hover:bg-amber-600 text-white border border-amber-500 hover:border-amber-600">Download Draft (.json)</button>
             <button id="uploadDraftButton" class="px-3 py-1.5 text-sm rounded-lg font-semibold shadow-md transition-colors duration-150 ease-in-out bg-amber-500 hover:bg-amber-600 text-white border border-amber-500 hover:border-amber-600">Upload Draft (.json)</button>
