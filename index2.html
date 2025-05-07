@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Therapist SOAP Note Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+            overscroll-behavior-y: none;
+        }
+        .main-content {
+            /* Adjusted height to account for header and footer */
+            height: calc(100vh - 128px); /* Approx 64px for header, 64px for footer */
+        }
+        .form-section {
+            background-color: white;
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+            margin-bottom: 1.5rem; /* mb-6 */
+            transition: padding 0.3s ease;
+        }
+        /* Compact mode */
+        .compact .form-section {
+            padding: 0.75rem; /* p-3 */
+            margin-bottom: 0.75rem; /* mb-3 */
+        }
+        .compact .form-field {
+            margin-top: 0.5rem; /* mt-2 */
+        }
+        .compact textarea {
+            min-height: 60px;
+        }
+        .compact .form-section h3 {
+            margin-bottom: 0.5rem; /* mb-2 */
+            padding-bottom: 0.25rem; /* pb-1 */
+            font-size: 1rem; /* text-base */
+        }
+        .compact label {
+            font-size: 0.75rem; /* text-xs */
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        
+        /* Expanded mode */
+        .expanded .form-section {
+            padding: 2rem; /* p-8 */
+            margin-bottom: 2rem; /* mb-8 */
+        }
+        .expanded .form-field {
+            margin-top: 1.5rem; /* mt-6 */
+        }
+        .expanded textarea {
+            min-height: 120px;
+        }
+        .expanded .form-section h3 {
+            margin-bottom: 1.5rem; /* mb-6 */
+            padding-bottom: 0.75rem; /* pb-3 */
+            font-size: 1.5rem; /* text-2xl */
+        }
+        
+        .form-section h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            color: #0369a1; /* sky-700 */
+            margin-bottom: 1rem; /* mb-4 */
+            border-bottom: 1px solid #e2e8f0; /* border-slate-200 */
+            padding-bottom: 0.5rem; /* pb-2 */
+        }
+        .form-field label {
+            display: block;
+            font-weight: 500; /* font-medium */
+            margin-bottom: 0.5rem; /* mb-2 */
+            color: #334155; /* slate-700 */
+        }
+        .form-field textarea, .form-field input[type="text"] {
+            width: 100%;
+            border: 1px solid #cbd5e1; /* border-slate-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.75rem; /* p-3 */
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.5;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .form-field textarea:focus, .form-field input[type="text"]:focus {
+            border-color: #0ea5e9; /* sky-500 */
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); /* ring-2 ring-sky-500/20 */
+            outline: none;
+        }
+        .form-field textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .helper-panel {
+            background-color: white;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+        .suggestion-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.625rem 1rem; /* py-2.5 px-4 */
+            font-size: 0.875rem; /* text-sm */
+            color: #334155; /* slate-700 */
+            background-color: #f1f5f9; /* slate-100 */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            margin-bottom: 0.5rem; /* mb-2 */
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .suggestion-btn:hover {
+            background-color: #e0f2fe; /* sky-100 */
+            border-color: #7dd3fc; /* sky-300 */
+        }
+        
+        /* Custom suggestion styles */
+        .suggestion-btn.default {
+            border-left: 4px solid #94a3b8; /* slate-400 */
+        }
+        .suggestion-btn.custom-blue {
+            border-left: 4px solid #3b82f6; /* blue-500 */
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .suggestion-btn.custom-green {
+            border-left: 4px solid #10b981; /* emerald-500 */
+            background-color: #ecfdf5; /* emerald-50 */
+        }
+        .suggestion-btn.custom-purple {
+            border-left: 4px solid #8b5cf6; /* violet-500 */
+            background-color: #f5f3ff; /* violet-50 */
+        }
+        .suggestion-btn.custom-amber {
+            border-left: 4px solid #f59e0b; /* amber-500 */
+            background-color: #fffbeb; /* amber-50 */
+        }
+        .suggestion-btn.custom-pink {
+            border-left: 4px solid #ec4899; /* pink-500 */
+            background-color: #fdf2f8; /* pink-50 */
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+            transition: all 0.15s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { 
+            background-color: #0284c7; /* sky-600 */ 
+        }
+        .btn-primary:hover:not(:disabled) { 
+            background-color: #0369a1; /* sky-700 */ 
+        }
+        .btn-success { 
+            background-color: #059669; /* emerald-600 */ 
+        }
+        .btn-success:hover:not(:disabled) { 
+            background-color: #047857; /* emerald-700 */ 
+        }
+        .btn-secondary { 
+            background-color: #64748b; /* slate-500 */ 
+        }
+        .btn-secondary:hover:not(:disabled) { 
+            background-color: #475569; /* slate-600 */ 
+        }
+        .btn-danger { 
+            background-color: #dc2626; /* red-600 */ 
+        }
+        .btn-danger:hover:not(:disabled) { 
+            background-color: #b91c1c; /* red-700 */ 
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem; /* px-2 py-1 */
+            font-size: 0.75rem; /* text-xs */
+        }
+
+        .color-swatch {
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: inline-block;
+            cursor: pointer;
+            border: 2px solid transparent;
+            margin-right: 0.25rem;
+        }
+        .color-swatch.selected {
+            border-color: #1e293b; /* slate-800 */
+        }
+
+        #toast-message {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            visibility: hidden;
+        }
+        #toast-message.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            visibility: visible;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s linear 0.25s, opacity 0.25s;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 0s;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.8);
+            transition: transform 0.25s;
+        }
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Custom scrollbar for panels */
+        .scrollable-panel::-webkit-scrollbar { width: 6px; }
+        .scrollable-panel::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px;}
+        .scrollable-panel::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px;}
+        .scrollable-panel::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Toggle switch for template controls */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1; /* slate-300 */
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #0ea5e9; /* sky-500 */
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+        }
+        
+        /* Section visibility controls */
+        .section-visibility-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0; /* slate-200 */
+        }
+        .section-visibility-controls:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen" id="bodyElement">
+
+    <header class="bg-sky-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex flex-wrap justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-bold">SOAP Note Assistant</h1>
+            <div class="flex items-center space-x-2 mt-2 sm:mt-0">
+                <div class="bg-sky-800 rounded-lg px-3 py-1 flex items-center space-x-2">
+                    <label for="densitySelector" class="text-xs md:text-sm">Layout:</label>
+                    <select id="densitySelector" class="text-xs md:text-sm bg-sky-600 text-white rounded px-2 py-1 border-none focus:ring-2 focus:ring-white">
+                        <option value="normal">Normal</option>
+                        <option value="compact">Compact</option>
+                        <option value="expanded">Expanded</option>
+                    </select>
+                </div>
+                <button id="templateControlsButton" class="btn bg-sky-600 hover:bg-sky-500 text-xs md:text-sm">Template Options</button>
+                <button id="resetNoteButton" class="btn bg-sky-500 hover:bg-sky-400 text-xs md:text-sm">New Note</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-grow container mx-auto py-4 px-2 md:px-4 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full main-content">
+            <div class="md:col-span-2 overflow-y-auto scrollable-panel pr-2 pb-16">
+                <form id="soapNoteForm">
+                    <section class="form-section" id="section_general_info" aria-labelledby="general-info-header">
+                        <h3 id="general-info-header">General Information</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="form-field">
+                                <label for="gi_date">Date</label>
+                                <input type="text" id="gi_date" name="gi_date" placeholder="YYYY-MM-DD">
+                            </div>
+                            <div class="form-field">
+                                <label for="gi_client_id">Client ID / Name</label>
+                                <input type="text" id="gi_client_id" name="gi_client_id" placeholder="e.g., 12345 or Initials">
+                            </div>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="gi_session_focus">Session Focus / Main Topic</label>
+                            <textarea id="gi_session_focus" name="gi_session_focus" placeholder="e.g., Review of coping strategies for anxiety"></textarea>
+                        </div>
+                    </section>
+
+                    <section class="form-section" id="section_subjective" aria-labelledby="subjective-header">
+                        <h3 id="subjective-header">S (Subjective)</h3>
+                        <div class="form-field">
+                            <label for="s_main_concerns">Client's Main Concerns, Statements, Presenting Issues</label>
+                            <textarea id="s_main_concerns" name="s_main_concerns" placeholder="Client states, '...' or primary issues reported"></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="s_mood_symptoms">Reported Mood, Symptoms (sleep, appetite), Stress Levels</label>
+                            <textarea id="s_mood_symptoms" name="s_mood_symptoms" placeholder="e.g., Mood: Anxious. Sleep: Poor. Stress: High."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="s_risk">Suicidal/Homicidal Ideation (Client Report)</label>
+                            <textarea id="s_risk" name="s_risk" placeholder="e.g., Denied SI/HI. Reported fleeting thoughts of..."></textarea>
+                        </div>
+                    </section>
+
+                    <section class="form-section" id="section_objective" aria-labelledby="objective-header">
+                        <h3 id="objective-header">O (Objective)</h3>
+                        <div class="form-field">
+                            <label for="o_presentation">Appearance, Behavior, Attitude, Motor Activity, Eye Contact</label>
+                            <textarea id="o_presentation" name="o_presentation" placeholder="e.g., Well-groomed, cooperative, restless, good eye contact"></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="o_affect_mood_speech">Observed Affect, Mood, Speech Characteristics</label>
+                            <textarea id="o_affect_mood_speech" name="o_affect_mood_speech" placeholder="e.g., Affect: Congruent. Mood: Euthymic. Speech: Normal rate."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="o_thought_orientation">Thought Process/Content, Orientation</label>
+                            <textarea id="o_thought_orientation" name="o_thought_orientation" placeholder="e.g., Thought process: Logical. Oriented x4."></textarea>
+                        </div>
+                    </section>
+
+                    <section class="form-section" id="section_assessment" aria-labelledby="assessment-header">
+                        <h3 id="assessment-header">A (Assessment)</h3>
+                        <div class="form-field">
+                            <label for="a_summary_impressions">Summary of Progress, Clinical Impressions, Response to Treatment</label>
+                            <textarea id="a_summary_impressions" name="a_summary_impressions" placeholder="e.g., Making good progress with CBT. Symptoms of GAD appear reduced."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="a_strengths_challenges">Client Strengths and Challenges/Barriers</label>
+                            <textarea id="a_strengths_challenges" name="a_strengths_challenges" placeholder="e.g., Strengths: Motivated. Challenges: Limited social support."></textarea>
+                        </div>
+                         <div class="form-field mt-4">
+                            <label for="a_risk_level_justification">Risk Assessment (Level and Justification)</label>
+                            <textarea id="a_risk_level_justification" name="a_risk_level_justification" placeholder="e.g., Low risk for self-harm, no active SI/HI, protective factors present."></textarea>
+                        </div>
+                    </section>
+
+                    <section class="form-section" id="section_plan" aria-labelledby="plan-header">
+                        <h3 id="plan-header">P (Plan)</h3>
+                        <div class="form-field">
+                            <label for="p_interventions_response">Interventions Used This Session & Client's Response</label>
+                            <textarea id="p_interventions_response" name="p_interventions_response" placeholder="e.g., Utilized psychoeducation on anxiety. Client was receptive."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="p_focus_homework">Focus for Next Session, Homework Assigned</label>
+                            <textarea id="p_focus_homework" name="p_focus_homework" placeholder="e.g., Next session: Review thought records. Homework: Complete daily mood log."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="p_safety_referrals_appt">Safety Planning, Referrals, Next Appointment</label>
+                            <textarea id="p_safety_referrals_appt" name="p_safety_referrals_appt" placeholder="e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD."></textarea>
+                        </div>
+                    </section>
+                </form>
+            </div>
+
+            <aside class="md:col-span-1 h-full flex flex-col helper-panel p-4">
+                <div class="flex justify-between items-center mb-3 border-b pb-2">
+                    <h2 id="helperPanelTitle" class="text-lg font-semibold text-sky-600">Suggestions</h2>
+                    <button id="addCustomSuggestionBtn" class="btn btn-primary btn-sm" title="Add your own suggestion">+ Add Custom</button>
+                </div>
+                
+                <div id="suggestionTypesFilter" class="flex items-center space-x-2 mb-3 text-xs text-slate-500">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="showDefaultSuggestions" class="form-checkbox h-3 w-3 text-sky-600" checked>
+                        <label for="showDefaultSuggestions" class="ml-1">Default</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="showCustomSuggestions" class="form-checkbox h-3 w-3 text-sky-600" checked>
+                        <label for="showCustomSuggestions" class="ml-1">Custom</label>
+                    </div>
+                    <button id="manageSuggestionsBtn" class="text-sky-600 hover:text-sky-800 text-xs ml-auto">Manage All</button>
+                </div>
+                
+                <div id="suggestionsContainer" class="flex-grow overflow-y-auto scrollable-panel pr-1">
+                    <p class="text-slate-500 text-sm">Click on a field in the form to see relevant suggestions here.</p>
+                </div>
+                
+                <div class="flex space-x-2 mt-3">
+                    <button id="clearActiveFieldButton" class="btn btn-secondary w-full text-sm">Clear Current Field</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <footer class="bg-white shadow-upward p-3 border-t border-slate-200">
+        <div class="container mx-auto flex flex-wrap justify-center md:justify-end items-center gap-2 md:gap-3">
+            <button id="compileCopyButton" class="btn btn-success text-sm">Compile & Copy Note</button>
+            <button id="saveDraftButton" class="btn btn-primary text-sm">Save Draft</button>
+            <button id="loadDraftButton" class="btn btn-secondary text-sm">Load Draft</button>
+            <button id="clearFormButton" class="btn btn-danger text-sm">Clear Entire Form</button>
+        </div>
+    </footer>
+
+    <!-- Modal for adding custom suggestions -->
+    <div id="customSuggestionModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold text-sky-700 mb-4">Add Custom Suggestion</h3>
+            <div class="mb-4">
+                <label for="customSuggestionText" class="block font-medium text-slate-700 mb-2">Suggestion Text</label>
+                <textarea id="customSuggestionText" class="w-full border border-slate-300 rounded-md p-3 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20" rows="4" placeholder="Enter your suggestion text here..."></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block font-medium text-slate-700 mb-2">Color</label>
+                <div class="flex space-x-2" id="colorOptions">
+                    <span class="color-swatch selected" style="background-color: #3b82f6;" data-color="custom-blue"></span>
+                    <span class="color-swatch" style="background-color: #10b981;" data-color="custom-green"></span>
+                    <span class="color-swatch" style="background-color: #8b5cf6;" data-color="custom-purple"></span>
+                    <span class="color-swatch" style="background-color: #f59e0b;" data-color="custom-amber"></span>
+                    <span class="color-swatch" style="background-color: #ec4899;" data-color="custom-pink"></span>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelCustomSuggestion" class="btn btn-secondary">Cancel</button>
+                <button id="saveCustomSuggestion" class="btn btn-primary">Save Suggestion</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for managing all suggestions -->
+    <div id="manageSuggestionsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold text-sky-700 mb-4">Manage Suggestions</h3>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-medium text-slate-700">Your Custom Suggestions</h4>
+                    <select id="filterSuggestionField" class="text-sm border border-slate-300 rounded p-1">
+                        <option value="all">All Fields</option>
+                        <!-- Field options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div id="customSuggestionsList" class="max-h-64 overflow-y-auto bg-slate-50 rounded-md p-2 border border-slate-200">
+                    <!-- Custom suggestions will be listed here -->
+                    <p class="text-slate-500 text-sm italic">No custom suggestions yet.</p>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="exportSuggestions" class="btn btn-secondary">Export</button>
+                <button id="importSuggestions" class="btn btn-secondary">Import</button>
+                <button id="closeManageSuggestions" class="btn btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for template controls -->
+    <div id="templateControlsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold text-sky-700 mb-4">Template Options</h3>
+            
+            <div class="mb-6">
+                <h4 class="font-medium text-slate-700 mb-2">Section Visibility</h4>
+                <div class="bg-slate-50 rounded-md p-3 border border-slate-200">
+                    <div class="section-visibility-controls">
+                        <span>General Information</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_general_info" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="section-visibility-controls">
+                        <span>Subjective (S)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_subjective" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="section-visibility-controls">
+                        <span>Objective (O)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_objective" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="section-visibility-controls">
+                        <span>Assessment (A)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_assessment" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="section-visibility-controls">
+                        <span>Plan (P)</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_plan" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-slate-700 mb-2">Note Format Settings</h4>
+                <div class="bg-slate-50 rounded-md p-3 border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="dateFormat" class="text-sm">Date Format:</label>
+                        <select id="dateFormat" class="text-sm border border-slate-300 rounded p-1">
+                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm">Auto-populate today's date:</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_auto_date" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Use bulleted format in compiled note:</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle_bulleted_format" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-4">
+                <button id="resetTemplateOptions" class="btn btn-secondary">Reset to Default</button>
+                <button id="saveTemplateOptions" class="btn btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for importing -->
+    <input type="file" id="importFileInput" accept=".json" class="hidden">
+    
+    <div id="toast-message">Message here</div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // === DOM Elements ===
+        const form = document.getElementById('soapNoteForm');
+        const bodyElement = document.getElementById('bodyElement');
+        const helperPanelTitle = document.getElementById('helperPanelTitle');
+        const suggestionsContainer = document.getElementById('suggestionsContainer');
+        const compileCopyButton = document.getElementById('compileCopyButton');
+        const saveDraftButton = document.getElementById('saveDraftButton');
+        const loadDraftButton = document.getElementById('loadDraftButton');
+        const clearFormButton = document.getElementById('clearFormButton');
+        const resetNoteButton = document.getElementById('resetNoteButton');
+        const clearActiveFieldButton = document.getElementById('clearActiveFieldButton');
+        const densitySelector = document.getElementById('densitySelector');
+        const toastMessage = document.getElementById('toast-message');
+        
+        // Custom suggestions modal elements
+        const customSuggestionModal = document.getElementById('customSuggestionModal');
+        const customSuggestionText = document.getElementById('customSuggestionText');
+        const saveCustomSuggestion = document.getElementById('saveCustomSuggestion');
+        const cancelCustomSuggestion = document.getElementById('cancelCustomSuggestion');
+        const addCustomSuggestionBtn = document.getElementById('addCustomSuggestionBtn');
+        const colorOptions = document.getElementById('colorOptions');
+        
+        // Manage suggestions modal elements
+        const manageSuggestionsBtn = document.getElementById('manageSuggestionsBtn');
+        const manageSuggestionsModal = document.getElementById('manageSuggestionsModal');
+        const customSuggestionsList = document.getElementById('customSuggestionsList');
+        const closeManageSuggestions = document.getElementById('closeManageSuggestions');
+        const filterSuggestionField = document.getElementById('filterSuggestionField');
+        const exportSuggestions = document.getElementById('exportSuggestions');
+        const importSuggestions = document.getElementById('importSuggestions');
+        const importFileInput = document.getElementById('importFileInput');
+        
+        // Template controls elements
+        const templateControlsButton = document.getElementById('templateControlsButton');
+        const templateControlsModal = document.getElementById('templateControlsModal');
+        const saveTemplateOptions = document.getElementById('saveTemplateOptions');
+        const resetTemplateOptions = document.getElementById('resetTemplateOptions');
+        
+        // Suggestion Filter Controls
+        const showDefaultSuggestions = document.getElementById('showDefaultSuggestions');
+        const showCustomSuggestions = document.getElementById('showCustomSuggestions');
+        
+        // State variables
+        let activeTextarea = null;
+        let selectedColorClass = 'custom-blue';
+
+        // === Custom Suggestions Storage ===
+        // Structure: { fieldId: [{ text: string, color: string }] }
+        let customSuggestions = JSON.parse(localStorage.getItem('soapNoteCustomSuggestions')) || {};
+        
+        // === Template Options Storage ===
+        let templateOptions = JSON.parse(localStorage.getItem('soapNoteTemplateOptions')) || {
+            sectionVisibility: {
+                general_info: true,
+                subjective: true,
+                objective: true,
+                assessment: true,
+                plan: true
+            },
+            dateFormat: 'YYYY-MM-DD',
+            autoDate: true,
+            bulletedFormat: true
+        };
+        
+        // === UI Density Settings ===
+        let currentDensity = localStorage.getItem('soapNoteDensity') || 'normal';
+        densitySelector.value = currentDensity;
+        applyDensitySetting(currentDensity);
+
+        // Field definitions: id, label for helper, and array of suggestions
+        const fieldData = {
+            gi_date: {
+                label: "Date",
+                suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "]
+            },
+            gi_client_id: {
+                label: "Client ID / Name",
+                suggestions: ["Client ID: ", "Client Initials: "]
+            },
+            gi_session_focus: {
+                label: "Session Focus",
+                suggestions: [
+                    "Session focused on reviewing coping strategies for [issue].",
+                    "Exploration of [topic, e.g., recent stressors].",
+                    "Follow-up on [previous topic/homework].",
+                    "Psychoeducation regarding [condition/skill].",
+                    "Goal setting for [area]."
+                ]
+            },
+            s_main_concerns: {
+                label: "Client's Main Concerns",
+                suggestions: [
+                    "Client states, \"[Quote client's words here]\".",
+                    "Client reported primary concerns regarding [topic1] and [topic2].",
+                    "The main issue discussed was [issue].",
+                    "Client expressed distress about [situation].",
+                    "Client presented with concerns about [symptom/problem]."
+                ]
+            },
+            s_mood_symptoms: {
+                label: "Reported Mood & Symptoms",
+                suggestions: [
+                    "Client reported mood as [e.g., anxious, depressed, stable, fair, 7/10].",
+                    "Sleep reported as [e.g., poor, adequate, 6 hours, restless].",
+                    "Appetite reported as [e.g., good, decreased, increased].",
+                    "Energy levels described as [e.g., low, moderate, good].",
+                    "Reported experiencing [symptom, e.g., headaches, irritability, lack of motivation].",
+                    "Stress level reported as [e.g., high, manageable, X/10]."
+                ]
+            },
+            s_risk: {
+                label: "Suicidal/Homicidal Ideation (Client Report)",
+                suggestions: [
+                    "Client denied any suicidal or homicidal ideation, intent, or plan.",
+                    "Client reported fleeting thoughts of [suicide/self-harm] but denied intent or plan.",
+                    "No SI/HI reported by client.",
+                    "Client was directly asked about SI/HI and denied.",
+                    "Safety plan discussed in relation to reported thoughts."
+                ]
+            },
+            o_presentation: {
+                label: "Appearance & Behavior",
+                suggestions: [
+                    "Client presented as [e.g., well-groomed, casually dressed, disheveled].",
+                    "Behavior was [e.g., cooperative, restless, withdrawn, engaged].",
+                    "Attitude towards therapist was [e.g., open, guarded, friendly].",
+                    "Motor activity was [e.g., within normal limits, agitated, slowed].",
+                    "Eye contact was [e.g., good, fair, poor, fleeting]."
+                ]
+            },
+            o_affect_mood_speech: {
+                label: "Observed Affect, Mood & Speech",
+                suggestions: [
+                    "Affect observed as [e.g., congruent with mood, constricted, flat, labile, broad].",
+                    "Observed mood appeared [e.g., euthymic, anxious, dysphoric, irritable].",
+                    "Speech was [e.g., clear and coherent, pressured, slow, soft, loud, normal rate and rhythm].",
+                    "Vocal tone was [e.g., monotonous, expressive]."
+                ]
+            },
+            o_thought_orientation: {
+                label: "Thought Process & Orientation",
+                suggestions: [
+                    "Thought process appeared [e.g., logical, coherent, tangential, circumstantial, disorganized].",
+                    "Thought content revealed [e.g., no evidence of delusions or hallucinations, preoccupation with X].",
+                    "Client was alert and oriented to [person, place, time, situation - specify, e.g., x3, x4].",
+                    "Cognitive functioning appeared [e.g., intact, impaired in X area].",
+                    "Insight judged to be [e.g., good, fair, poor, limited].",
+                    "Judgment appeared [e.g., good, fair, impaired]."
+                ]
+            },
+            a_summary_impressions: {
+                label: "Summary & Clinical Impressions",
+                suggestions: [
+                    "Client appears to be making [e.g., good, some, limited] progress towards therapeutic goals.",
+                    "Clinical impressions are consistent with [diagnosis/working hypothesis, e.g., GAD, MDD, Adjustment Disorder].",
+                    "Client responded [e.g., positively, with difficulty] to interventions.",
+                    "Symptoms of [condition] appear to be [e.g., improving, worsening, stable].",
+                    "Current presentation suggests [summary statement]."
+                ]
+            },
+            a_strengths_challenges: {
+                label: "Strengths & Challenges",
+                suggestions: [
+                    "Client's strengths include [e.g., motivation, insight, strong support system, resilience].",
+                    "Identified challenges include [e.g., negative self-talk, difficulty with emotional regulation, lack of resources].",
+                    "Barriers to progress may include [barrier1, barrier2].",
+                    "Protective factors noted: [factor1, factor2]."
+                ]
+            },
+            a_risk_level_justification: {
+                label: "Risk Assessment",
+                suggestions: [
+                    "Risk of harm to self assessed as [e.g., low, moderate, high] due to [justification].",
+                    "Risk of harm to others assessed as [e.g., low, moderate, high] due to [justification].",
+                    "No current indicators of acute risk.",
+                    "Protective factors such as [factor1, factor2] mitigate risk.",
+                    "Risk factors include [factor1, factor2].",
+                    "Safety plan remains appropriate / was updated."
+                ]
+            },
+            p_interventions_response: {
+                label: "Interventions & Response",
+                suggestions: [
+                    "Interventions utilized this session included [e.g., CBT, MI, psychoeducation, supportive listening, problem-solving].",
+                    "Client was receptive to [intervention] and [describe response, e.g., actively participated, appeared to understand].",
+                    "Practiced [skill, e.g., grounding techniques, communication skills].",
+                    "Explored [topic, e.g., cognitive distortions related to X].",
+                    "Provided validation and support for [client's experience]."
+                ]
+            },
+            p_focus_homework: {
+                label: "Next Session Focus & Homework",
+                suggestions: [
+                    "Focus for next session will be to [e.g., review homework, explore X further, introduce Y skill].",
+                    "Homework assigned: [e.g., complete thought record, practice mindfulness daily, journal about X].",
+                    "Client agreed to [specific action before next session].",
+                    "No homework assigned this session."
+                ]
+            },
+            p_safety_referrals_appt: {
+                label: "Safety, Referrals & Next Appointment",
+                suggestions: [
+                    "Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].",
+                    "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].",
+                    "Client to follow up with [specialist/service].",
+                    "Next appointment scheduled for [date] at [time].",
+                    "Continue weekly/bi-weekly sessions."
+                ]
+            }
+        };
+
+        // === Initialize UI Based on Saved Settings ===
+        
+        // Populate the field filter dropdown for manage suggestions modal
+        function populateFieldFilter() {
+            filterSuggestionField.innerHTML = '<option value="all">All Fields</option>';
+            
+            Object.keys(fieldData).forEach(fieldId => {
+                const option = document.createElement('option');
+                option.value = fieldId;
+                option.textContent = fieldData[fieldId].label;
+                filterSuggestionField.appendChild(option);
+            });
+        }
+        
+        // Apply template options to UI
+        function applyTemplateOptions() {
+            // Set section visibility
+            Object.keys(templateOptions.sectionVisibility).forEach(section => {
+                const sectionElement = document.getElementById(`section_${section}`);
+                const toggleElement = document.getElementById(`toggle_${section}`);
+                
+                if (sectionElement && toggleElement) {
+                    sectionElement.style.display = templateOptions.sectionVisibility[section] ? 'block' : 'none';
+                    toggleElement.checked = templateOptions.sectionVisibility[section];
+                }
+            });
+            
+            // Set other template options
+            const dateFormatSelect = document.getElementById('dateFormat');
+            const autoDateToggle = document.getElementById('toggle_auto_date');
+            const bulletedFormatToggle = document.getElementById('toggle_bulleted_format');
+            
+            if (dateFormatSelect) dateFormatSelect.value = templateOptions.dateFormat;
+            if (autoDateToggle) autoDateToggle.checked = templateOptions.autoDate;
+            if (bulletedFormatToggle) bulletedFormatToggle.checked = templateOptions.bulletedFormat;
+            
+            // If auto-date is enabled, set today's date
+            if (templateOptions.autoDate) {
+                const dateField = document.getElementById('gi_date');
+                if (dateField && !dateField.value) {
+                    const today = new Date();
+                    let formattedDate = '';
+                    
+                    switch (templateOptions.dateFormat) {
+                        case 'MM/DD/YYYY':
+                            formattedDate = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+                            break;
+                        case 'DD/MM/YYYY':
+                            formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+                            break;
+                        default: // YYYY-MM-DD
+                            formattedDate = today.toISOString().slice(0,10);
+                    }
+                    
+                    dateField.value = formattedDate;
+                }
+            }
+        }
+        
+        // Apply UI density settings
+        function applyDensitySetting(density) {
+            bodyElement.classList.remove('compact', 'normal', 'expanded');
+            bodyElement.classList.add(density);
+            localStorage.setItem('soapNoteDensity', density);
+        }
+        
+        // Initialize the UI
+        populateFieldFilter();
+        applyTemplateOptions();
+
+        // === Event Listeners ===
+        
+        // Attach focus listeners to all textareas and inputs in the form
+        Object.keys(fieldData).forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.addEventListener('focus', () => {
+                    activeTextarea = element;
+                    updateHelperPanel(fieldId);
+                });
+            }
+        });
+        
+        // Clear active field button
+        clearActiveFieldButton.addEventListener('click', () => {
+            if (activeTextarea) {
+                activeTextarea.value = '';
+                showToast(`Field "${fieldData[activeTextarea.id]?.label || 'Current'}" cleared.`, 'info');
+                activeTextarea.focus(); // Keep focus on the cleared field
+            } else {
+                showToast('No field is currently active.', 'info');
+            }
+        });
+        
+        // UI Density selector
+        densitySelector.addEventListener('change', () => {
+            applyDensitySetting(densitySelector.value);
+        });
+        
+        // Custom suggestion modal events
+        addCustomSuggestionBtn.addEventListener('click', () => {
+            if (!activeTextarea) {
+                showToast('Please select a field first.', 'info');
+                return;
+            }
+            
+            // Reset modal fields
+            customSuggestionText.value = '';
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.remove('selected');
+            });
+            document.querySelector('.color-swatch[data-color="custom-blue"]').classList.add('selected');
+            selectedColorClass = 'custom-blue';
+            
+            // Show modal
+            customSuggestionModal.classList.add('active');
+        });
+        
+        // Color swatch selection
+        colorOptions.addEventListener('click', (e) => {
+            if (e.target.classList.contains('color-swatch')) {
+                document.querySelectorAll('.color-swatch').forEach(swatch => {
+                    swatch.classList.remove('selected');
+                });
+                e.target.classList.add('selected');
+                selectedColorClass = e.target.getAttribute('data-color');
+            }
+        });
+        
+        // Save custom suggestion
+        saveCustomSuggestion.addEventListener('click', () => {
+            const text = customSuggestionText.value.trim();
+            
+            if (!text) {
+                showToast('Please enter suggestion text.', 'error');
+                return;
+            }
+            
+            if (!activeTextarea) {
+                showToast('No field selected.', 'error');
+                return;
+            }
+            
+            const fieldId = activeTextarea.id;
+            
+            // Initialize array for this field if it doesn't exist
+            if (!customSuggestions[fieldId]) {
+                customSuggestions[fieldId] = [];
+            }
+            
+            // Add new suggestion
+            customSuggestions[fieldId].push({
+                text: text,
+                color: selectedColorClass
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('soapNoteCustomSuggestions', JSON.stringify(customSuggestions));
+            
+            // Close modal & update panel
+            customSuggestionModal.classList.remove('active');
+            updateHelperPanel(fieldId);
+            
+            showToast('Custom suggestion added!', 'success');
+        });
+        
+        // Cancel custom suggestion
+        cancelCustomSuggestion.addEventListener('click', () => {
+            customSuggestionModal.classList.remove('active');
+        });
+        
+        // Manage suggestions button
+        manageSuggestionsBtn.addEventListener('click', () => {
+            updateManageSuggestionsList();
+            manageSuggestionsModal.classList.add('active');
+        });
+        
+        // Close manage suggestions modal
+        closeManageSuggestions.addEventListener('click', () => {
+            manageSuggestionsModal.classList.remove('active');
+        });
+        
+        // Filter suggestion field change
+        filterSuggestionField.addEventListener('change', () => {
+            updateManageSuggestionsList();
+        });
+        
+        // Export suggestions
+        exportSuggestions.addEventListener('click', () => {
+            const dataStr = JSON.stringify(customSuggestions, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'soap_note_custom_suggestions.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showToast('Suggestions exported successfully!', 'success');
+        });
+        
+        // Import suggestions trigger
+        importSuggestions.addEventListener('click', () => {
+            importFileInput.click();
+        });
+        
+        // Import file handling
+        importFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure (basic check)
+                    let isValid = true;
+                    Object.keys(importedData).forEach(key => {
+                        if (!Array.isArray(importedData[key])) {
+                            isValid = false;
+                        }
+                    });
+                    
+                    if (!isValid) {
+                        showToast('Invalid suggestions file format.', 'error');
+                        return;
+                    }
+                    
+                    // Confirm before overwriting
+                    if (Object.keys(customSuggestions).length > 0) {
+                        if (!confirm('This will overwrite your existing custom suggestions. Continue?')) {
+                            return;
+                        }
+                    }
+                    
+                    // Import and save
+                    customSuggestions = importedData;
+                    localStorage.setItem('soapNoteCustomSuggestions', JSON.stringify(customSuggestions));
+                    
+                    // Update UI
+                    updateManageSuggestionsList();
+                    if (activeTextarea) {
+                        updateHelperPanel(activeTextarea.id);
+                    }
+                    
+                    showToast('Suggestions imported successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Import error:', error);
+                    showToast('Error importing file. Please check the file format.', 'error');
+                }
+                
+                // Reset file input
+                importFileInput.value = '';
+            };
+            
+            reader.readAsText(file);
+        });
+        
+        // Template controls button
+        templateControlsButton.addEventListener('click', () => {
+            templateControlsModal.classList.add('active');
+        });
+        
+        // Save template options
+        saveTemplateOptions.addEventListener('click', () => {
+            // Save section visibility
+            ['general_info', 'subjective', 'objective', 'assessment', 'plan'].forEach(section => {
+                const toggleElement = document.getElementById(`toggle_${section}`);
+                if (toggleElement) {
+                    templateOptions.sectionVisibility[section] = toggleElement.checked;
+                }
+            });
+            
+            // Save other options
+            templateOptions.dateFormat = document.getElementById('dateFormat').value;
+            templateOptions.autoDate = document.getElementById('toggle_auto_date').checked;
+            templateOptions.bulletedFormat = document.getElementById('toggle_bulleted_format').checked;
+            
+            // Save to localStorage
+            localStorage.setItem('soapNoteTemplateOptions', JSON.stringify(templateOptions));
+            
+            // Apply changes
+            applyTemplateOptions();
+            
+            // Close modal
+            templateControlsModal.classList.remove('active');
+            
+            showToast('Template options saved!', 'success');
+        });
+        
+        // Reset template options
+        resetTemplateOptions.addEventListener('click', () => {
+            if (confirm('Reset all template options to default?')) {
+                templateOptions = {
+                    sectionVisibility: {
+                        general_info: true,
+                        subjective: true,
+                        objective: true,
+                        assessment: true,
+                        plan: true
+                    },
+                    dateFormat: 'YYYY-MM-DD',
+                    autoDate: true,
+                    bulletedFormat: true
+                };
+                
+                // Reset UI elements
+                ['general_info', 'subjective', 'objective', 'assessment', 'plan'].forEach(section => {
+                    const toggleElement = document.getElementById(`toggle_${section}`);
+                    if (toggleElement) toggleElement.checked = true;
+                });
+                
+                document.getElementById('dateFormat').value = 'YYYY-MM-DD';
+                document.getElementById('toggle_auto_date').checked = true;
+                document.getElementById('toggle_bulleted_format').checked = true;
+                
+                showToast('Template options reset to default.', 'info');
+            }
+        });
+        
+        // Filter toggle for suggestion types
+        showDefaultSuggestions.addEventListener('change', () => {
+            if (activeTextarea) updateHelperPanel(activeTextarea.id);
+        });
+        
+        showCustomSuggestions.addEventListener('change', () => {
+            if (activeTextarea) updateHelperPanel(activeTextarea.id);
+        });
+        
+        // === Helper Functions ===
+        
+        // Update the helper panel with suggestions for the selected field
+        function updateHelperPanel(fieldId) {
+            const data = fieldData[fieldId];
+            if (!data) {
+                helperPanelTitle.textContent = "Suggestions";
+                suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions for this field.</p>';
+                return;
+            }
+
+            helperPanelTitle.textContent = `Suggestions for: ${data.label}`;
+            suggestionsContainer.innerHTML = ''; // Clear previous suggestions
+            
+            let hasAnySuggestions = false;
+
+            // Add default suggestions if enabled
+            if (showDefaultSuggestions.checked && data.suggestions && data.suggestions.length > 0) {
+                hasAnySuggestions = true;
+                
+                // Add default suggestions header
+                const defaultHeader = document.createElement('h4');
+                defaultHeader.className = 'text-sm font-medium text-slate-500 mb-2';
+                defaultHeader.textContent = 'Default Suggestions';
+                suggestionsContainer.appendChild(defaultHeader);
+                
+                // Add default suggestions
+                data.suggestions.forEach(suggestionText => {
+                    const btn = document.createElement('button');
+                    btn.className = 'suggestion-btn default';
+                    btn.textContent = suggestionText;
+                    btn.addEventListener('click', () => insertSuggestion(suggestionText));
+                    suggestionsContainer.appendChild(btn);
+                });
+            }
+            
+            // Add custom suggestions if enabled
+            if (showCustomSuggestions.checked && customSuggestions[fieldId] && customSuggestions[fieldId].length > 0) {
+                hasAnySuggestions = true;
+                
+                // Add custom suggestions header with spacing from default
+                const customHeader = document.createElement('h4');
+                customHeader.className = 'text-sm font-medium text-slate-500 mb-2 mt-4';
+                customHeader.textContent = 'Your Custom Suggestions';
+                suggestionsContainer.appendChild(customHeader);
+                
+                // Add custom suggestions
+                customSuggestions[fieldId].forEach((suggestion, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = `suggestion-btn ${suggestion.color}`;
+                    btn.textContent = suggestion.text;
+                    
+                    // Create a container for the button and delete icon
+                    const container = document.createElement('div');
+                    container.className = 'relative mb-2';
+                    
+                    // Add delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'absolute right-1 top-1 text-slate-400 hover:text-red-500 text-xs font-bold p-1';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.title = 'Delete this suggestion';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent triggering the parent button
+                        if (confirm('Delete this custom suggestion?')) {
+                            customSuggestions[fieldId].splice(index, 1);
+                            
+                            // If the array is empty, remove the key
+                            if (customSuggestions[fieldId].length === 0) {
+                                delete customSuggestions[fieldId];
+                            }
+                            
+                            localStorage.setItem('soapNoteCustomSuggestions', JSON.stringify(customSuggestions));
+                            updateHelperPanel(fieldId);
+                            showToast('Custom suggestion deleted.', 'info');
+                        }
+                    });
+                    
+                    btn.addEventListener('click', () => insertSuggestion(suggestion.text));
+                    
+                    container.appendChild(btn);
+                    container.appendChild(deleteBtn);
+                    suggestionsContainer.appendChild(container);
+                });
+            }
+            
+            // Show message if no suggestions are available or all filters are off
+            if (!hasAnySuggestions || (!showDefaultSuggestions.checked && !showCustomSuggestions.checked)) {
+                suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions available. Add your own or enable filters.</p>';
+            }
+        }
+
+        // Insert suggestion text into the active textarea
+        function insertSuggestion(text) {
+            if (!activeTextarea) return;
+
+            const currentVal = activeTextarea.value;
+            const cursorPos = activeTextarea.selectionStart;
+            
+            let prefix = "";
+            // Add a space if not at the beginning of the textarea and the preceding char isn't a space or newline
+            if (cursorPos > 0 && !/[\s\n]$/.test(currentVal.substring(0, cursorPos))) {
+                prefix = " ";
+            }
+
+            const textToInsert = prefix + text;
+            
+            activeTextarea.value = currentVal.substring(0, cursorPos) + textToInsert + currentVal.substring(activeTextarea.selectionEnd);
+            activeTextarea.focus();
+            activeTextarea.selectionStart = activeTextarea.selectionEnd = cursorPos + textToInsert.length;
+        }
+        
+        // Update the custom suggestions management list
+        function updateManageSuggestionsList() {
+            const selectedField = filterSuggestionField.value;
+            customSuggestionsList.innerHTML = '';
+            
+            let hasSuggestions = false;
+            
+            // Collect fields to display based on filter
+            const fieldsToShow = selectedField === 'all' 
+                ? Object.keys(customSuggestions) 
+                : (customSuggestions[selectedField] ? [selectedField] : []);
+            
+            // Display suggestions for each field
+            fieldsToShow.forEach(fieldId => {
+                if (!customSuggestions[fieldId] || customSuggestions[fieldId].length === 0) return;
+                
+                hasSuggestions = true;
+                
+                // Add field header if showing all fields
+                if (selectedField === 'all') {
+                    const fieldHeader = document.createElement('h5');
+                    fieldHeader.className = 'font-medium text-sky-700 mt-3 mb-1';
+                    fieldHeader.textContent = fieldData[fieldId]?.label || fieldId;
+                    customSuggestionsList.appendChild(fieldHeader);
+                }
+                
+                // Add suggestions
+                customSuggestions[fieldId].forEach((suggestion, index) => {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.className = `p-2 mb-2 rounded border ${suggestion.color.replace('custom-', 'border-')} bg-white flex justify-between items-center`;
+                    
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'text-sm flex-grow mr-2';
+                    textSpan.textContent = suggestion.text;
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'text-red-500 hover:text-red-700 text-sm font-bold';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.title = 'Delete this suggestion';
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm('Delete this custom suggestion?')) {
+                            customSuggestions[fieldId].splice(index, 1);
+                            
+                            // If the array is empty, remove the key
+                            if (customSuggestions[fieldId].length === 0) {
+                                delete customSuggestions[fieldId];
+                            }
+                            
+                            localStorage.setItem('soapNoteCustomSuggestions', JSON.stringify(customSuggestions));
+                            updateManageSuggestionsList();
+                            
+                            // Also update helper panel if the active field is affected
+                            if (activeTextarea && activeTextarea.id === fieldId) {
+                                updateHelperPanel(fieldId);
+                            }
+                            
+                            showToast('Custom suggestion deleted.', 'info');
+                        }
+                    });
+                    
+                    suggestionItem.appendChild(textSpan);
+                    suggestionItem.appendChild(deleteBtn);
+                    customSuggestionsList.appendChild(suggestionItem);
+                });
+            });
+            
+            // Show message if no suggestions
+            if (!hasSuggestions) {
+                const noSuggestionsMsg = document.createElement('p');
+                noSuggestionsMsg.className = 'text-slate-500 text-sm italic';
+                noSuggestionsMsg.textContent = selectedField === 'all' 
+                    ? 'No custom suggestions yet. Add your own suggestions using the "+ Add Custom" button.' 
+                    : 'No custom suggestions for this field yet.';
+                customSuggestionsList.appendChild(noSuggestionsMsg);
+            }
+        }
+
+        // --- Action Buttons ---
+        compileCopyButton.addEventListener('click', () => {
+            let compiledNote = "";
+            const fieldOrder = [ // Defines the order and labels for the compiled note
+                { id: 'gi_date', label: 'Date' },
+                { id: 'gi_client_id', label: 'Client ID' },
+                { id: 'gi_session_focus', label: 'Session Focus', sectionBreak: true },
+
+                { section: 'S (Subjective)' },
+                { id: 's_main_concerns', label: "Client's Main Concerns" },
+                { id: 's_mood_symptoms', label: "Reported Mood & Symptoms" },
+                { id: 's_risk', label: "Suicidal/Homicidal Ideation (Report)" , sectionBreak: true},
+
+                { section: 'O (Objective)' },
+                { id: 'o_presentation', label: "Appearance & Behavior" },
+                { id: 'o_affect_mood_speech', label: "Observed Affect, Mood & Speech" },
+                { id: 'o_thought_orientation', label: "Thought Process & Orientation", sectionBreak: true },
+
+                { section: 'A (Assessment)' },
+                { id: 'a_summary_impressions', label: "Summary & Clinical Impressions" },
+                { id: 'a_strengths_challenges', label: "Strengths & Challenges" },
+                { id: 'a_risk_level_justification', label: "Risk Assessment", sectionBreak: true },
+
+                { section: 'P (Plan)' },
+                { id: 'p_interventions_response', label: "Interventions & Response" },
+                { id: 'p_focus_homework', label: "Next Session Focus & Homework" },
+                { id: 'p_safety_referrals_appt', label: "Safety, Referrals & Next Appointment" }
+            ];
+            
+            // Check if any section is hidden per template options
+            const visibleSections = {
+                'general_info': templateOptions.sectionVisibility.general_info,
+                'S (Subjective)': templateOptions.sectionVisibility.subjective,
+                'O (Objective)': templateOptions.sectionVisibility.objective,
+                'A (Assessment)': templateOptions.sectionVisibility.assessment,
+                'P (Plan)': templateOptions.sectionVisibility.plan
+            };
+            
+            let currentSection = "";
+            fieldOrder.forEach(item => {
+                // Skip sections that are hidden
+                if (item.section && !visibleSections[item.section]) return;
+                if (item.id && item.id.startsWith('s_') && !visibleSections['S (Subjective)']) return;
+                if (item.id && item.id.startsWith('o_') && !visibleSections['O (Objective)']) return;
+                if (item.id && item.id.startsWith('a_') && !visibleSections['A (Assessment)']) return;
+                if (item.id && item.id.startsWith('p_') && !visibleSections['P (Plan)']) return;
+                if (item.id && item.id.startsWith('gi_') && !visibleSections['general_info']) return;
+                
+                if (item.section) {
+                    if (compiledNote.length > 0 && !compiledNote.endsWith("\n\n")) compiledNote += "\n"; // Add extra newline before section unless it's the first
+                    compiledNote += `${item.section}:\n`;
+                    currentSection = item.section;
+                } else {
+                    const element = document.getElementById(item.id);
+                    const value = element ? element.value.trim() : '';
+                    if (value) { // Only add field if it has content
+                        if (item.label.includes("Date") || item.label.includes("Client ID") || item.label.includes("Session Focus")) { // General info at top
+                             compiledNote += `${item.label}: ${value}\n`;
+                        } else if (templateOptions.bulletedFormat) {
+                             compiledNote += `- ${item.label}: ${value}\n`;
+                        } else {
+                             compiledNote += `${item.label}: ${value}\n`;
+                        }
+                    }
+                    if (item.sectionBreak && compiledNote.length > 0 && !compiledNote.endsWith("\n\n")) {
+                         compiledNote += "\n"; // Add a newline after a section's content
+                    }
+                }
+            });
+
+            if (compiledNote.trim() === "") {
+                showToast("Note is empty. Nothing to copy.", "error");
+                return;
+            }
+
+            navigator.clipboard.writeText(compiledNote.trim())
+                .then(() => showToast("Formatted note copied to clipboard!"))
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showToast("Failed to copy. Please try manual copy.", "error");
+                });
+        });
+
+        function getFormData() {
+            const data = {};
+            Object.keys(fieldData).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) data[id] = element.value;
+            });
+            return data;
+        }
+
+        function setFormData(data) {
+            Object.keys(data).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.value = data[id] || '';
+            });
+        }
+
+        saveDraftButton.addEventListener('click', () => {
+            try {
+                const dataToSave = getFormData();
+                if (Object.values(dataToSave).every(val => val.trim() === "")) {
+                     showToast("Nothing to save. Form is empty.", "info");
+                     return;
+                }
+                localStorage.setItem('therapistSOAPNoteDraft', JSON.stringify(dataToSave));
+                showToast("Draft saved locally!");
+            } catch (e) {
+                console.error("Error saving to local storage:", e);
+                showToast("Could not save draft. Storage might be full/disabled.", "error");
+            }
+        });
+
+        loadDraftButton.addEventListener('click', () => {
+            const currentData = getFormData();
+            if (Object.values(currentData).some(val => val.trim() !== "") && !confirm("Loading a draft will overwrite current content. Continue?")) {
+                 return;
+            }
+            try {
+                const savedData = localStorage.getItem('therapistSOAPNoteDraft');
+                if (savedData) {
+                    setFormData(JSON.parse(savedData));
+                    showToast("Draft loaded from local storage!");
+                } else {
+                    showToast("No saved draft found.", "info");
+                }
+            } catch (e) {
+                console.error("Error loading from local storage:", e);
+                showToast("Could not load draft. Data might be corrupted.", "error");
+            }
+        });
+        
+        const clearTheForm = () => {
+            form.reset(); // Resets all form fields
+            Object.keys(fieldData).forEach(id => { // Ensure textareas are also cleared if not covered by reset
+                const element = document.getElementById(id);
+                if (element && element.tagName === 'TEXTAREA') element.value = '';
+            });
+            helperPanelTitle.textContent = "Suggestions";
+            suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field in the form to see relevant suggestions here.</p>';
+            activeTextarea = null;
+            
+            // Set today's date if auto-date is enabled
+            if (templateOptions.autoDate) {
+                const dateField = document.getElementById('gi_date');
+                if (dateField) {
+                    const today = new Date();
+                    let formattedDate = '';
+                    
+                    switch (templateOptions.dateFormat) {
+                        case 'MM/DD/YYYY':
+                            formattedDate = `${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+                            break;
+                        case 'DD/MM/YYYY':
+                            formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth()+1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+                            break;
+                        default: // YYYY-MM-DD
+                            formattedDate = today.toISOString().slice(0,10);
+                    }
+                    
+                    dateField.value = formattedDate;
+                }
+            }
+            
+            if (document.getElementById('gi_date')) document.getElementById('gi_date').focus();
+        };
+
+        clearFormButton.addEventListener('click', () => {
+            if (confirm("Are you sure you want to clear the entire form? This cannot be undone.")) {
+                clearTheForm();
+                showToast("Form cleared.");
+            }
+        });
+        
+        resetNoteButton.addEventListener('click', () => {
+             if (confirm("Are you sure you want to start a new note? This will clear the entire form.")) {
+                clearTheForm();
+                showToast("New note started. Form cleared.");
+            }
+        });
+
+        // Click outside to close modals
+        window.addEventListener('click', (e) => {
+            if (e.target === customSuggestionModal) {
+                customSuggestionModal.classList.remove('active');
+            }
+            if (e.target === manageSuggestionsModal) {
+                manageSuggestionsModal.classList.remove('active');
+            }
+            if (e.target === templateControlsModal) {
+                templateControlsModal.classList.remove('active');
+            }
+        });
+
+        // --- Toast Notification ---
+        let toastTimeout;
+        function showToast(message, type = 'success') {
+            clearTimeout(toastTimeout);
+            toastMessage.textContent = message;
+            toastMessage.className = 'show'; 
+            
+            if (type === 'error') {
+                toastMessage.style.backgroundColor = '#dc2626'; // red-600
+            } else if (type === 'info') {
+                toastMessage.style.backgroundColor = '#2563eb'; // blue-600
+            } else { // success
+                toastMessage.style.backgroundColor = '#16a34a'; // green-600
+            }
+
+            toastTimeout = setTimeout(() => {
+                toastMessage.className = toastMessage.className.replace('show', '');
+            }, 3000);
+        }
+        
+        // Set initial focus
+        const firstInput = document.getElementById('gi_date');
+        if (firstInput) firstInput.focus();
+
+    });
+    </script>
+</body>
+</html>
+        
