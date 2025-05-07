@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDraftButton = document.getElementById('loadDraftButton');
     const clearFormButton = document.getElementById('clearFormButton');
     const resetNoteButton = document.getElementById('resetNoteButton');
-    // clearActiveFieldButton is removed
     const toastMessage = document.getElementById('toast-message');
     const newSectionNameInput = document.getElementById('newSectionNameInput');
     const addNewSectionButton = document.getElementById('addNewSectionButton');
@@ -34,10 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State & Keys ---
     let activeTextarea = null;
     let toastTimeout; 
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v8';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v8';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v8';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v8';
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v9';
+    const UI_SETTINGS_KEY = 'noteinghamUISettings_v9';
+    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v9';
+    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v9';
     let masterFieldData = {}; 
     let masterSectionData = [];
 
@@ -82,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimeout = setTimeout(() => { toastMessage.className = toastMessage.className.replace('show', ''); }, 3000);
     }
 
-    // --- Dynamic Form Rendering & Template Management (Full Code) ---
+    // --- Dynamic Form Rendering & Template Management ---
     function getCustomTemplate() { /* ... Full code ... */ 
         const template = localStorage.getItem(CUSTOM_TEMPLATE_KEY);
         return template ? JSON.parse(template) : { sections: [] };
@@ -123,13 +122,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    function renderForm() { /* ... Full code ... */ 
+    function renderForm() { /* ... Full code - REMOVED adding .form-input class here ... */ 
         if (!soapNoteForm) { console.error("soapNoteForm not found!"); return; }
         soapNoteForm.innerHTML = ''; 
         masterSectionData.forEach(sectionMeta => {
             const sectionElement = document.createElement('section');
-            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section';
-            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section');
+            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section'; // Base class
+            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section'); // Add custom marker if needed
             sectionElement.setAttribute('aria-labelledby', `${sectionMeta.id}-header`);
             const h3 = document.createElement('h3');
             h3.id = `${sectionMeta.id}-header`; h3.textContent = sectionMeta.title;
@@ -154,10 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     currentGridDiv.appendChild(formFieldDiv); fieldCountInGrid++; addedToGrid = true;
                 } else {
-                    const isFirstNonH3Element = sectionElement.children.length <= 2; // Only h3 and potentially delete btn exist
-                     if (!isFirstNonH3Element) {
-                         formFieldDiv.classList.add('mt-4');
-                     }
+                    const isFirstNonH3Element = sectionElement.children.length <= 2;
+                     if (!isFirstNonH3Element) formFieldDiv.classList.add('mt-4');
                     sectionElement.appendChild(formFieldDiv);
                 }
                 const labelEl = document.createElement('label');
@@ -166,7 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (field.type === 'textarea') inputEl = document.createElement('textarea');
                 else { inputEl = document.createElement('input'); inputEl.type = 'text'; }
                 inputEl.id = fieldId; inputEl.name = fieldId; inputEl.placeholder = field.placeholder;
-                inputEl.classList.add('form-input'); formFieldDiv.appendChild(inputEl);
+                // Do NOT add .form-input here; rely on CSS targeting .form-field textarea, .form-field input
+                formFieldDiv.appendChild(inputEl);
                 inputEl.addEventListener('focus', () => {
                     activeTextarea = inputEl; updateHelperPanel(fieldId);
                     if (customSuggestionModule) customSuggestionModule.style.display = 'block';
@@ -236,16 +234,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); 
         const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
         if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
-            console.error("Helper panel tab buttons/content mismatch."); return;
+             console.error("Helper panel tab elements mismatch."); return;
         }
+        const activeClasses = ['active-tab', 'border-sky-500', 'text-sky-600'];
+        const inactiveClasses = ['border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300'];
+
         tabButtons.forEach(button => {
             button.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent potential default button behavior
-                // Deactivate others
-                tabButtons.forEach(btn => btn.classList.remove('active-tab', 'border-sky-500', 'text-sky-600'));
+                e.preventDefault(); 
+                // Deactivate all
+                tabButtons.forEach(btn => {
+                    btn.classList.remove(...activeClasses);
+                    btn.classList.add(...inactiveClasses);
+                });
                 tabContents.forEach(content => content.classList.remove('active'));
                 // Activate clicked
-                button.classList.add('active-tab', 'border-sky-500', 'text-sky-600');
+                button.classList.add(...activeClasses);
+                button.classList.remove(...inactiveClasses);
                 const targetContentId = button.dataset.tabTarget;
                 const targetContentElement = document.getElementById(targetContentId);
                 if (targetContentElement) targetContentElement.classList.add('active');
@@ -258,9 +263,20 @@ document.addEventListener('DOMContentLoaded', () => {
                  const targetContentElement = document.getElementById(button.dataset.tabTarget);
                  if (targetContentElement) targetContentElement.classList.add('active');
                  activeTabFound = true;
+                 // Ensure inactive classes are removed if active is set initially in HTML
+                 button.classList.remove(...inactiveClasses);
+             } else {
+                  // Ensure inactive classes are present if not active initially
+                  button.classList.add(...inactiveClasses);
+                  button.classList.remove(...activeClasses);
              }
          });
-         if(!activeTabFound && suggestionsHelperTabButton) suggestionsHelperTabButton.click(); 
+         if(!activeTabFound && suggestionsHelperTabButton) {
+             // Default to suggestions tab if none were active
+             suggestionsHelperTabButton.classList.add(...activeClasses);
+             suggestionsHelperTabButton.classList.remove(...inactiveClasses);
+             if(suggestionsHelperTabContent) suggestionsHelperTabContent.classList.add('active');
+         }
     }
 
     // --- Download/Upload & Draft Management (Full Code) ---
@@ -450,9 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
         if(suggestionsContainer) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field...</p>';
         if(customSuggestionModule) customSuggestionModule.style.display = 'none'; activeTextarea = null;
-        const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
+        // const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
         // Remove auto-focus on clear
-        // if (firstStandardFieldId && document.getElementById(firstStandardFieldId)) document.getElementById(firstStandardFieldId).focus();
     };
     if (clearFormButton) { /* ... Full code ... */ 
         clearFormButton.addEventListener('click', () => { if (confirm("Clear entire form?")) { clearTheForm(); showToast("Form cleared."); } });
@@ -479,15 +494,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function applyUISettings() { /* ... Full code ... */ 
         const settings = loadUISettings();
-        // Apply layout density class to body
         document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
         document.body.classList.add(`layout-${settings.layout || 'normal'}`);
-        
-        // Update density button active state
         document.querySelectorAll('.top-controls-bar .btn-density').forEach(btn => { 
             const isActive = btn.dataset.density === (settings.layout || 'normal');
             btn.classList.toggle('active', isActive);
-             // Toggle explicit styles based on active state
             if (isActive) {
                  btn.classList.add('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
                  btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
@@ -496,8 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
              }
         });
-
-        // Apply section visibility
         if (settings.sectionsVisible) {
             Object.entries(settings.sectionsVisible).forEach(([sectionId, isVisible]) => {
                 const sectionElement = document.getElementById(sectionId);
@@ -506,7 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkbox) checkbox.checked = !!isVisible; 
             });
         }
-        // Note: Density-specific padding/height for inputs is now handled by CSS rules like .layout-compact .form-input { padding: ... }
     }
     function initSectionVisibilityControls() { /* ... Full code ... */ 
         if (!visibleSectionsControlsContainer) return;
@@ -551,9 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderForm();      
     setupHelperPanelTabs(); 
     initDensityControls(); 
-    
-    // Restore active state for density buttons on load
-    applyUISettings(); // Call applyUISettings again after everything is initialized to set correct initial states
+    applyUISettings(); // Ensure settings applied after init
 
     if (!activeTextarea && customSuggestionModule) {
         customSuggestionModule.style.display = 'none';
