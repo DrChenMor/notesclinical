@@ -16,16 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDraftButton = document.getElementById('loadDraftButton');
     const clearFormButton = document.getElementById('clearFormButton');
     const resetNoteButton = document.getElementById('resetNoteButton');
-    // clearActiveFieldButton REMOVED
+    const clearActiveFieldButton = document.getElementById('clearActiveFieldButton');
     const toastMessage = document.getElementById('toast-message');
     const newSectionNameInput = document.getElementById('newSectionNameInput');
     const addNewSectionButton = document.getElementById('addNewSectionButton');
     const targetSectionSelect = document.getElementById('targetSectionSelect');
     const newFieldNameInput = document.getElementById('newFieldNameInput');
     const addNewFieldButton = document.getElementById('addNewFieldButton');
+    
     const toggleVisibleSectionsButton = document.getElementById('toggleVisibleSectionsButton');
     const visibleSectionsPopover = document.getElementById('visibleSectionsPopover');
     const visibleSectionsControlsContainer = document.getElementById('visibleSectionsControlsContainer');
+
     const suggestionsHelperTabButton = document.getElementById('suggestionsHelperTabButton');
     const templateEditorHelperTabButton = document.getElementById('templateEditorHelperTabButton');
     const suggestionsHelperTabContent = document.getElementById('suggestionsHelperTabContent');
@@ -34,14 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State & Keys ---
     let activeTextarea = null;
     let toastTimeout; 
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v10'; // Version bump
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v10';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v10';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v10';
+
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v6';
+    const UI_SETTINGS_KEY = 'noteinghamUISettings_v6';
+    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v6';
+    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v6';
+
     let masterFieldData = {}; 
     let masterSectionData = [];
 
-    const standardSections = [ /* ... Full standardSections array ... */ 
+    const standardSections = [ /* ... Full standardSections array as previously provided ... */ 
         { id: 'generalInfoSection', title: 'General Information', fields: [
             { id: 'gi_date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD', suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "] },
             { id: 'gi_client_id', label: 'Client ID / Name', type: 'text', placeholder: 'e.g., 12345 or Initials', suggestions: ["Client ID: ", "Client Initials: "] },
@@ -69,11 +73,64 @@ document.addEventListener('DOMContentLoaded', () => {
         ]}
     ];
 
-    // --- Helper Functions ---
-    function generateUniqueId(prefix = 'id_') { /* ... Full code ... */ 
+    // All other JavaScript functions (generateUniqueId, showToast, template management, form rendering, downloads, suggestions, etc.)
+    // remain the same as in the previous FULL CORRECTED JavaScript.
+    // The key change is in `setupHelperPanelTabs` and ensuring event listeners are correctly attached to the new tab buttons.
+
+    function setupHelperPanelTabs() {
+        const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); // Filter out null if an ID is wrong
+        const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
+
+        if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
+            console.error("Helper panel tab buttons or content not found or mismatch.");
+            return;
+        }
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Deactivate all tabs
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active-tab', 'border-sky-500', 'text-sky-600');
+                    btn.classList.add('border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300');
+                });
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                // Activate clicked tab
+                button.classList.add('active-tab', 'border-sky-500', 'text-sky-600');
+                button.classList.remove('border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300');
+                
+                const targetContentId = button.dataset.tabTarget;
+                const targetContentElement = document.getElementById(targetContentId);
+                if (targetContentElement) {
+                    targetContentElement.classList.add('active');
+                } else {
+                    console.error(`Target content not found for tab: ${targetContentId}`);
+                }
+            });
+        });
+
+        // Ensure default active tab is set if specified in HTML or default to suggestions
+        let activeTabSet = false;
+        tabButtons.forEach(button => {
+            if (button.classList.contains('active-tab')) {
+                const targetContentElement = document.getElementById(button.dataset.tabTarget);
+                if (targetContentElement) targetContentElement.classList.add('active');
+                activeTabSet = true;
+            }
+        });
+        if (!activeTabSet && suggestionsHelperTabButton) {
+            suggestionsHelperTabButton.click(); // Default to suggestions tab
+        }
+    }
+
+
+    // --- Helper Functions (Full Code) ---
+    function generateUniqueId(prefix = 'id_') { 
         return prefix + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    function showToast(message, type = 'success') { /* ... Full code ... */ 
+    function showToast(message, type = 'success') { 
         clearTimeout(toastTimeout); 
         toastMessage.textContent = message; toastMessage.className = 'show';
         if (type === 'error') toastMessage.style.backgroundColor = '#dc2626';
@@ -82,15 +139,15 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimeout = setTimeout(() => { toastMessage.className = toastMessage.className.replace('show', ''); }, 3000);
     }
 
-    // --- Dynamic Form Rendering & Template Management ---
-    function getCustomTemplate() { /* ... Full code ... */ 
+    // --- Dynamic Form Rendering & Template Management (Full Code) ---
+    function getCustomTemplate() { 
         const template = localStorage.getItem(CUSTOM_TEMPLATE_KEY);
         return template ? JSON.parse(template) : { sections: [] };
     }
-    function saveCustomTemplate(customTemplate) { /* ... Full code ... */ 
+    function saveCustomTemplate(customTemplate) { 
         localStorage.setItem(CUSTOM_TEMPLATE_KEY, JSON.stringify(customTemplate));
     }
-    function buildMasterData() { /* ... Full code ... */ 
+    function buildMasterData() { 
         masterFieldData = {}; masterSectionData = [];
         standardSections.forEach(section => {
             const sectionMeta = { id: section.id, title: section.title, isCustom: false, fieldIds: [] };
@@ -128,8 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
         soapNoteForm.innerHTML = ''; 
         masterSectionData.forEach(sectionMeta => {
             const sectionElement = document.createElement('section');
-            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section'; 
-            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section'); 
+            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section';
+            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section');
             sectionElement.setAttribute('aria-labelledby', `${sectionMeta.id}-header`);
             const h3 = document.createElement('h3');
             h3.id = `${sectionMeta.id}-header`; h3.textContent = sectionMeta.title;
@@ -145,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionMeta.fieldIds.forEach((fieldId) => {
                 const field = masterFieldData[fieldId];
                 if (!field) { console.warn(`Field data missing: ${fieldId}`); return; }
-                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field'; 
+                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field';
                 let addedToGrid = false;
                 if (sectionMeta.id === 'generalInfoSection' && field.type === 'text' && fieldCountInGrid < 2) {
                     if (!currentGridDiv) {
@@ -154,8 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     currentGridDiv.appendChild(formFieldDiv); fieldCountInGrid++; addedToGrid = true;
                 } else {
-                    const isFirstNonH3Element = sectionElement.children.length <= (sectionMeta.isCustom ? 2 : 1); // Account for delete button if custom
-                     if (!isFirstNonH3Element) formFieldDiv.classList.add('mt-4');
+                    const isFirstFieldInNonGrid = sectionElement.querySelectorAll('.form-field').length === 0 && !currentGridDiv;
+                     if (!isFirstFieldInNonGrid && ! (sectionElement.lastChild === currentGridDiv && currentGridDiv && currentGridDiv.contains(formFieldDiv)) ) {
+                         formFieldDiv.classList.add('mt-4');
+                    }
                     sectionElement.appendChild(formFieldDiv);
                 }
                 const labelEl = document.createElement('label');
@@ -164,9 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (field.type === 'textarea') inputEl = document.createElement('textarea');
                 else { inputEl = document.createElement('input'); inputEl.type = 'text'; }
                 inputEl.id = fieldId; inputEl.name = fieldId; inputEl.placeholder = field.placeholder;
-                // Add the base class for styling via CSS
-                inputEl.classList.add('form-input-base'); 
-                formFieldDiv.appendChild(inputEl);
+                inputEl.classList.add('form-input'); formFieldDiv.appendChild(inputEl);
                 inputEl.addEventListener('focus', () => {
                     activeTextarea = inputEl; updateHelperPanel(fieldId);
                     if (customSuggestionModule) customSuggestionModule.style.display = 'block';
@@ -178,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         populateTargetSectionSelect(); initSectionVisibilityControls(); applyUISettings(); 
     }
-    function handleDeleteCustomSection(sectionId, sectionTitle) { /* ... Full code ... */ 
+    function handleDeleteCustomSection(sectionId, sectionTitle) { 
         if (!confirm(`Delete section "${sectionTitle}"? This cannot be undone.`)) return;
         const customTemplate = getCustomTemplate();
         customTemplate.sections = customTemplate.sections.filter(s => s.id !== sectionId);
@@ -190,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         buildMasterData(); renderForm();
         showToast(`Section "${sectionTitle}" deleted.`, 'success');
     }
-    function populateTargetSectionSelect() { /* ... Full code ... */ 
+    function populateTargetSectionSelect() { 
         if (!targetSectionSelect) return;
         targetSectionSelect.innerHTML = '';
         masterSectionData.forEach(section => {
@@ -199,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             targetSectionSelect.appendChild(option);
         });
     }
-    if (addNewSectionButton) { /* ... Full code ... */ 
+    if (addNewSectionButton) { 
         addNewSectionButton.addEventListener('click', () => {
             const sectionName = newSectionNameInput.value.trim();
             if (!sectionName) { showToast("Section title empty.", "info"); return; }
@@ -210,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("New section added!", "success");
         });
     }
-    if (addNewFieldButton) { /* ... Full code ... */ 
+    if (addNewFieldButton) { 
         addNewFieldButton.addEventListener('click', () => {
             const fieldLabel = newFieldNameInput.value.trim(); const selectedSectionId = targetSectionSelect.value;
             if (!fieldLabel) { showToast("Field label empty.", "info"); return; }
@@ -231,51 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // --- Helper Panel Tab Navigation (Full Code) ---
-    function setupHelperPanelTabs() { /* ... Full code ... */ 
-        const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); 
-        const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
-        if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
-             console.error("Helper panel tab elements mismatch."); return;
-        }
-        const activeClasses = ['active-tab', 'border-sky-500', 'text-sky-600'];
-        const inactiveClasses = ['border-transparent', 'text-slate-500', 'hover:text-slate-700', 'hover:border-slate-300'];
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault(); 
-                tabButtons.forEach(btn => { btn.classList.remove(...activeClasses); btn.classList.add(...inactiveClasses); });
-                tabContents.forEach(content => content.classList.remove('active'));
-                button.classList.add(...activeClasses); button.classList.remove(...inactiveClasses);
-                const targetContentId = button.dataset.tabTarget;
-                const targetContentElement = document.getElementById(targetContentId);
-                if (targetContentElement) targetContentElement.classList.add('active');
-                else console.error(`Target content not found: ${targetContentId}`);
-            });
-        });
-         let activeTabFound = false;
-         tabButtons.forEach(button => {
-             // Use the classList from HTML to determine initial state
-             if(button.classList.contains('active-tab')) {
-                 const targetContentElement = document.getElementById(button.dataset.tabTarget);
-                 if (targetContentElement) targetContentElement.classList.add('active');
-                 activeTabFound = true;
-                 button.classList.remove(...inactiveClasses); // Ensure inactive classes are off
-             } else {
-                  button.classList.add(...inactiveClasses); // Ensure inactive classes are on
-                  button.classList.remove(...activeClasses);
-             }
-         });
-         // Fallback if HTML didn't specify an active tab
-         if(!activeTabFound && suggestionsHelperTabButton) {
-             suggestionsHelperTabButton.classList.add(...activeClasses);
-             suggestionsHelperTabButton.classList.remove(...inactiveClasses);
-             if(suggestionsHelperTabContent) suggestionsHelperTabContent.classList.add('active');
-         }
-    }
-
     // --- Download/Upload & Draft Management (Full Code) ---
-    function generateFilename(baseName, extension) { /* ... Full code ... */ 
+    function generateFilename(baseName, extension) { 
         const dateEl = document.getElementById('gi_date'); const clientIdEl = document.getElementById('gi_client_id');
         let dateStr = dateEl && dateEl.value ? dateEl.value.replace(/-/g, '') : new Date().toISOString().slice(0,10).replace(/-/g, '');
         if (!/^\d{8}$/.test(dateStr) && !/^\d{4}\d{2}\d{2}$/.test(dateStr)) dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
@@ -283,12 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!clientIdStr) clientIdStr = 'NoClient';
         return `NoteingHam_${baseName}_${dateStr}_${clientIdStr}.${extension}`;
     }
-    function triggerDownload(filename, data, mimeType) { /* ... Full code ... */ 
+    function triggerDownload(filename, data, mimeType) { 
         const blob = new Blob([data], { type: mimeType }); const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = filename;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
-    if (downloadNoteButton) { /* ... Full code ... */ 
+    if (downloadNoteButton) { 
         downloadNoteButton.addEventListener('click', () => {
             let htmlNote = `<html><head><meta charset="UTF-8"><title>SOAP Note</title><style>body{font-family:Arial,sans-serif;} h3{margin-top:1em;margin-bottom:0.5em;} p{margin:0.2em 0;}</style></head><body>`;
             const uiSettings = loadUISettings(); let contentAdded = false;
@@ -308,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Note downloaded!", "success");
         });
     }
-    if (downloadDraftButton) { /* ... Full code ... */ 
+    if (downloadDraftButton) { 
         downloadDraftButton.addEventListener('click', () => {
             const dataToSave = getFormData();
             if (Object.values(dataToSave).every(val => val.trim() === "")) { showToast("Nothing to download.", "info"); return; }
@@ -316,10 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerDownload(filename, jsonData, 'application/json'); showToast("Draft downloaded!", "success");
         });
     }
-    if (uploadDraftButton) { /* ... Full code ... */ 
+    if (uploadDraftButton) { 
         uploadDraftButton.addEventListener('click', () => uploadDraftInput.click() );
     }
-    if (uploadDraftInput) { /* ... Full code ... */ 
+    if (uploadDraftInput) { 
         uploadDraftInput.addEventListener('change', (event) => {
             const file = event.target.files[0]; if (!file) return;
             const currentData = getFormData();
@@ -339,21 +353,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Custom Suggestions, Field Focus, Helper Panel (Full Code) ---
-    function getCustomSuggestions() { /* ... Full code ... */ 
+    function getCustomSuggestions() { 
         const suggestions = localStorage.getItem(CUSTOM_SUGGESTIONS_KEY);
         return suggestions ? JSON.parse(suggestions) : {};
     }
-    function saveCustomSuggestions(allSuggestions) { /* ... Full code ... */ 
+    function saveCustomSuggestions(allSuggestions) { 
         localStorage.setItem(CUSTOM_SUGGESTIONS_KEY, JSON.stringify(allSuggestions));
     }
-    function addCustomSuggestionForField(fieldId, suggestionText) { /* ... Full code ... */ 
+    function addCustomSuggestionForField(fieldId, suggestionText) { 
         const allSuggestions = getCustomSuggestions();
         if (!allSuggestions[fieldId]) allSuggestions[fieldId] = [];
         if (!allSuggestions[fieldId].includes(suggestionText)) {
             allSuggestions[fieldId].push(suggestionText); saveCustomSuggestions(allSuggestions); return true;
         } return false;
     }
-    function deleteCustomSuggestionForField(fieldId, suggestionText) { /* ... Full code ... */ 
+    function deleteCustomSuggestionForField(fieldId, suggestionText) { 
         const allSuggestions = getCustomSuggestions();
         if (allSuggestions[fieldId]) {
             allSuggestions[fieldId] = allSuggestions[fieldId].filter(s => s !== suggestionText);
@@ -361,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveCustomSuggestions(allSuggestions);
         }
     }
-    if (addCustomSuggestionButton) { /* ... Full code ... */ 
+    if (addCustomSuggestionButton) { 
         addCustomSuggestionButton.addEventListener('click', () => {
             if (!activeTextarea || !activeTextarea.id) { showToast("No field selected.", "error"); return; }
             const suggestionText = customSuggestionInput.value.trim();
@@ -371,9 +385,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { showToast("Suggestion exists.", "info"); }
         });
     }
-    // Removed Clear Active Field Button Listener
-    
-    function updateHelperPanel(fieldId) { /* ... Full code ... */ 
+    if (clearActiveFieldButton) { 
+        clearActiveFieldButton.addEventListener('click', () => {
+            if (activeTextarea) {
+                activeTextarea.value = '';
+                showToast(`Field "${masterFieldData[activeTextarea.id]?.label || 'Current'}" cleared.`, 'info');
+                activeTextarea.focus();
+            } else { showToast('No field active.', 'info'); }
+        });
+    }
+    function updateHelperPanel(fieldId) { 
         const fieldMeta = masterFieldData[fieldId];
         if (!fieldMeta || !helperPanelSubtitle || !suggestionsContainer) return;
         helperPanelSubtitle.textContent = `For: ${fieldMeta.label}`;
@@ -389,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!hasSuggestions) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions. Add your own!</p>';
     }
-    function createSuggestionButton(text, isCustom, fieldId) { /* ... Full code ... */ 
+    function createSuggestionButton(text, isCustom, fieldId) { 
         const btn = document.createElement('button');
         btn.className = 'suggestion-btn' + (isCustom ? ' suggestion-btn-custom' : '');
         const textSpan = document.createElement('span');
@@ -407,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         btn.addEventListener('click', () => insertSuggestion(text)); return btn;
     }
-    function insertSuggestion(text) { /* ... Full code ... */ 
+    function insertSuggestion(text) { 
         if (!activeTextarea) return;
         const currentVal = activeTextarea.value; const cursorPos = activeTextarea.selectionStart; let prefix = "";
         if (cursorPos > 0 && !/[\s\n]$/.test(currentVal.substring(0, cursorPos))) prefix = " ";
@@ -420,12 +441,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Form Data Get/Set (Full Code) ---
-    function getFormData() { /* ... Full code ... */ 
+    function getFormData() { 
         const data = {};
         Object.keys(masterFieldData).forEach(id => { const element = document.getElementById(id); if (element) data[id] = element.value; });
         return data;
     }
-    function setFormData(data) { /* ... Full code ... */ 
+    function setFormData(data) { 
         Object.keys(masterFieldData).forEach(id => {
             const element = document.getElementById(id);
             if (element && typeof data[id] !== 'undefined') element.value = data[id] || '';
@@ -433,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Local Storage Draft (Full Code) ---
-    if (saveDraftButton) { /* ... Full code ... */ 
+    if (saveDraftButton) { 
         saveDraftButton.addEventListener('click', () => {
             try {
                 const dataToSave = getFormData();
@@ -442,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { console.error("Err save draft:", e); showToast("Could not save.", "error"); }
         });
     }
-    if (loadDraftButton) { /* ... Full code ... */ 
+    if (loadDraftButton) { 
         loadDraftButton.addEventListener('click', () => {
             const currentData = getFormData();
             if (Object.values(currentData).some(val => val.trim() !== "") && !confirm("Overwrite current?")) return;
@@ -456,21 +477,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Clear/Reset Form (Full Code) ---
-    const clearTheForm = () => { /* ... Full code ... */ 
+    const clearTheForm = () => { 
         Object.keys(masterFieldData).forEach(id => { const element = document.getElementById(id); if (element) element.value = ''; });
         if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
         if(suggestionsContainer) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field...</p>';
         if(customSuggestionModule) customSuggestionModule.style.display = 'none'; activeTextarea = null;
+        const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
+        if (firstStandardFieldId && document.getElementById(firstStandardFieldId)) document.getElementById(firstStandardFieldId).focus();
     };
-    if (clearFormButton) { /* ... Full code ... */ 
+    if (clearFormButton) { 
         clearFormButton.addEventListener('click', () => { if (confirm("Clear entire form?")) { clearTheForm(); showToast("Form cleared."); } });
     }
-    if (resetNoteButton) { /* ... Full code ... */ 
+    if (resetNoteButton) { 
         resetNoteButton.addEventListener('click', () => { if (confirm("Start new (clears form)?")) { clearTheForm(); showToast("New note. Form cleared."); } });
     }
 
     // --- UI Settings (Density & Section Visibility - Full Code) ---
-    function loadUISettings() { /* ... Full code ... */ 
+    function loadUISettings() { 
         const settings = localStorage.getItem(UI_SETTINGS_KEY);
         let defaultSectionsVisible = {}; masterSectionData.forEach(s => defaultSectionsVisible[s.id] = true); 
         const defaults = { layout: 'normal', sectionsVisible: defaultSectionsVisible };
@@ -481,24 +504,21 @@ document.addEventListener('DOMContentLoaded', () => {
             loaded.sectionsVisible = mergedSectionsVisible; return { ...defaults, ...loaded };
         } return defaults;
     }
-    function saveUISetting(key, value) { /* ... Full code ... */ 
+    function saveUISetting(key, value) { 
         const settings = loadUISettings();
         settings[key] = value; localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(settings));
     }
-    function applyUISettings() { /* ... Full code ... */ 
+    function applyUISettings() { 
         const settings = loadUISettings();
         document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
         document.body.classList.add(`layout-${settings.layout || 'normal'}`);
-        document.querySelectorAll('.top-controls-bar .btn-density').forEach(btn => { 
-            const isActive = btn.dataset.density === (settings.layout || 'normal');
-            btn.classList.toggle('active', isActive);
-            if (isActive) {
-                 btn.classList.add('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
-                 btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
-             } else {
-                 btn.classList.remove('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
-                 btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
-             }
+        document.querySelectorAll('.btn-density').forEach(btn => { // Adjusted selector for density buttons in top bar
+            btn.classList.remove('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600', 'active');
+            btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'); // Default outline style
+            if (btn.dataset.density === (settings.layout || 'normal')) {
+                btn.classList.add('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600', 'active');
+                btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
+            }
         });
         if (settings.sectionsVisible) {
             Object.entries(settings.sectionsVisible).forEach(([sectionId, isVisible]) => {
@@ -509,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-    function initSectionVisibilityControls() { /* ... Full code ... */ 
+    function initSectionVisibilityControls() { 
         if (!visibleSectionsControlsContainer) return;
         visibleSectionsControlsContainer.innerHTML = ''; 
         masterSectionData.forEach(section => {
@@ -528,14 +548,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    function initDensityControls() { /* ... Full code ... */ 
-         document.querySelectorAll('.top-controls-bar .btn-density').forEach(button => { 
+    function initDensityControls() { 
+         document.querySelectorAll('.top-controls-bar .btn-density').forEach(button => { // More specific selector
             button.addEventListener('click', () => {
                 saveUISetting('layout', button.dataset.density); applyUISettings();
             });
         });
     }
-    if (toggleVisibleSectionsButton && visibleSectionsPopover) { /* ... Full code ... */ 
+    if (toggleVisibleSectionsButton && visibleSectionsPopover) { 
         toggleVisibleSectionsButton.addEventListener('click', (event) => {
             event.stopPropagation(); visibleSectionsPopover.classList.toggle('active');
         });
@@ -552,10 +572,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderForm();      
     setupHelperPanelTabs(); 
     initDensityControls(); 
-    applyUISettings(); // Ensure settings applied after init
-
+    
+    const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
+    if (firstStandardFieldId) {
+        const firstEl = document.getElementById(firstStandardFieldId);
+        if (firstEl) firstEl.focus(); 
+    }
     if (!activeTextarea && customSuggestionModule) {
         customSuggestionModule.style.display = 'none';
-        if(helperPanelSubtitle) helperPanelSubtitle.textContent = "Select a field for suggestions";
+        if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
     }
 });
