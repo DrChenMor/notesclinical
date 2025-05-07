@@ -1,483 +1,304 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('soapNoteForm');
-    const helperPanelTitle = document.getElementById('helperPanelTitle');
-    const helperPanelSubtitle = document.getElementById('helperPanelSubtitle');
-    const suggestionsContainer = document.getElementById('suggestionsContainer');
-    
-    const customSuggestionModule = document.getElementById('customSuggestionModule');
-    const addCustomSuggestionTitle = document.getElementById('addCustomSuggestionTitle');
-    const customSuggestionInput = document.getElementById('customSuggestionInput');
-    const addCustomSuggestionButton = document.getElementById('addCustomSuggestionButton');
-
-    const compileCopyButton = document.getElementById('compileCopyButton');
-    const saveDraftButton = document.getElementById('saveDraftButton');
-    const loadDraftButton = document.getElementById('loadDraftButton');
-    const clearFormButton = document.getElementById('clearFormButton');
-    const resetNoteButton = document.getElementById('resetNoteButton');
-    const clearActiveFieldButton = document.getElementById('clearActiveFieldButton');
-    const toastMessage = document.getElementById('toast-message');
-
-    let activeTextarea = null;
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings';
-
-    // Field definitions: id, label for helper, and array of suggestions
-    const fieldData = {
-        gi_date: { label: "Date", suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "], sectionId: "generalInfoSection" },
-        gi_client_id: { label: "Client ID / Name", suggestions: ["Client ID: ", "Client Initials: "], sectionId: "generalInfoSection" },
-        gi_session_focus: { label: "Session Focus", suggestions: ["Session focused on reviewing coping strategies for [issue].", "Exploration of [topic, e.g., recent stressors].", "Follow-up on [previous topic/homework].", "Psychoeducation regarding [condition/skill].", "Goal setting for [area]."], sectionId: "generalInfoSection" },
-        s_main_concerns: { label: "Client's Main Concerns", suggestions: ["Client states, \"[Quote client's words here]\".", "Client reported primary concerns regarding [topic1] and [topic2].", "The main issue discussed was [issue].", "Client expressed distress about [situation].", "Client presented with concerns about [symptom/problem]."], sectionId: "subjectiveSection" },
-        s_mood_symptoms: { label: "Reported Mood & Symptoms", suggestions: ["Client reported mood as [e.g., anxious, depressed, stable, fair, 7/10].", "Sleep reported as [e.g., poor, adequate, 6 hours, restless].", "Appetite reported as [e.g., good, decreased, increased].", "Energy levels described as [e.g., low, moderate, good].", "Reported experiencing [symptom, e.g., headaches, irritability, lack of motivation].", "Stress level reported as [e.g., high, manageable, X/10]."], sectionId: "subjectiveSection" },
-        s_risk: { label: "Suicidal/Homicidal Ideation (Client Report)", suggestions: ["Client denied any suicidal or homicidal ideation, intent, or plan.", "Client reported fleeting thoughts of [suicide/self-harm] but denied intent or plan.", "No SI/HI reported by client.", "Client was directly asked about SI/HI and denied.", "Safety plan discussed in relation to reported thoughts."], sectionId: "subjectiveSection" },
-        o_presentation: { label: "Appearance & Behavior", suggestions: ["Client presented as [e.g., well-groomed, casually dressed, disheveled].", "Behavior was [e.g., cooperative, restless, withdrawn, engaged].", "Attitude towards therapist was [e.g., open, guarded, friendly].", "Motor activity was [e.g., within normal limits, agitated, slowed].", "Eye contact was [e.g., good, fair, poor, fleeting]."], sectionId: "objectiveSection" },
-        o_affect_mood_speech: { label: "Observed Affect, Mood & Speech", suggestions: ["Affect observed as [e.g., congruent with mood, constricted, flat, labile, broad].", "Observed mood appeared [e.g., euthymic, anxious, dysphoric, irritable].", "Speech was [e.g., clear and coherent, pressured, slow, soft, loud, normal rate and rhythm].", "Vocal tone was [e.g., monotonous, expressive]."], sectionId: "objectiveSection" },
-        o_thought_orientation: { label: "Thought Process & Orientation", suggestions: ["Thought process appeared [e.g., logical, coherent, tangential, circumstantial, disorganized].", "Thought content revealed [e.g., no evidence of delusions or hallucinations, preoccupation with X].", "Client was alert and oriented to [person, place, time, situation - specify, e.g., x3, x4].", "Cognitive functioning appeared [e.g., intact, impaired in X area].", "Insight judged to be [e.g., good, fair, poor, limited].", "Judgment appeared [e.g., good, fair, impaired]."], sectionId: "objectiveSection" },
-        a_summary_impressions: { label: "Summary & Clinical Impressions", suggestions: ["Client appears to be making [e.g., good, some, limited] progress towards therapeutic goals.", "Clinical impressions are consistent with [diagnosis/working hypothesis, e.g., GAD, MDD, Adjustment Disorder].", "Client responded [e.g., positively, with difficulty] to interventions.", "Symptoms of [condition] appear to be [e.g., improving, worsening, stable].", "Current presentation suggests [summary statement]."], sectionId: "assessmentSection" },
-        a_strengths_challenges: { label: "Strengths & Challenges", suggestions: ["Client's strengths include [e.g., motivation, insight, strong support system, resilience].", "Identified challenges include [e.g., negative self-talk, difficulty with emotional regulation, lack of resources].", "Barriers to progress may include [barrier1, barrier2].", "Protective factors noted: [factor1, factor2]."], sectionId: "assessmentSection" },
-        a_risk_level_justification: { label: "Risk Assessment", suggestions: ["Risk of harm to self assessed as [e.g., low, moderate, high] due to [justification].", "Risk of harm to others assessed as [e.g., low, moderate, high] due to [justification].", "No current indicators of acute risk.", "Protective factors such as [factor1, factor2] mitigate risk.", "Risk factors include [factor1, factor2].", "Safety plan remains appropriate / was updated."], sectionId: "assessmentSection" },
-        p_interventions_response: { label: "Interventions & Response", suggestions: ["Interventions utilized this session included [e.g., CBT, MI, psychoeducation, supportive listening, problem-solving].", "Client was receptive to [intervention] and [describe response, e.g., actively participated, appeared to understand].", "Practiced [skill, e.g., grounding techniques, communication skills].", "Explored [topic, e.g., cognitive distortions related to X].", "Provided validation and support for [client's experience]."], sectionId: "planSection" },
-        p_focus_homework: { label: "Next Session Focus & Homework", suggestions: ["Focus for next session will be to [e.g., review homework, explore X further, introduce Y skill].", "Homework assigned: [e.g., complete thought record, practice mindfulness daily, journal about X].", "Client agreed to [specific action before next session].", "No homework assigned this session."], sectionId: "planSection" },
-        p_safety_referrals_appt: { label: "Safety, Referrals & Next Appointment", suggestions: ["Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].", "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].", "Client to follow up with [specialist/service].", "Next appointment scheduled for [date] at [time].", "Continue weekly/bi-weekly sessions."], sectionId: "planSection" }
-    };
-
-    const formSections = [ // For managing visibility
-        { id: "generalInfoSection", label: "General Info" },
-        { id: "subjectiveSection", label: "Subjective (S)" },
-        { id: "objectiveSection", label: "Objective (O)" },
-        { id: "assessmentSection", label: "Assessment (A)" },
-        { id: "planSection", label: "Plan (P)" }
-    ];
-
-    function getCustomSuggestions() {
-        const suggestions = localStorage.getItem(CUSTOM_SUGGESTIONS_KEY);
-        return suggestions ? JSON.parse(suggestions) : {};
-    }
-
-    function saveCustomSuggestions(allSuggestions) {
-        localStorage.setItem(CUSTOM_SUGGESTIONS_KEY, JSON.stringify(allSuggestions));
-    }
-
-    function addCustomSuggestionForField(fieldId, suggestionText) {
-        const allSuggestions = getCustomSuggestions();
-        if (!allSuggestions[fieldId]) {
-            allSuggestions[fieldId] = [];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteingHam - SOAP Note Assistant</title>
+    <link rel="icon" type="image/png" href="ham.png"> <!-- FAVICON -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+            overscroll-behavior-y: none;
         }
-        if (!allSuggestions[fieldId].includes(suggestionText)) { // Avoid duplicates
-            allSuggestions[fieldId].push(suggestionText);
-            saveCustomSuggestions(allSuggestions);
-            return true;
+        .main-content {
+            height: calc(100vh - 128px); /* Approx 64px for header, 64px for footer */
         }
-        return false; // Suggestion already exists
-    }
+        .form-section {
+            background-color: white;
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+            margin-bottom: 1.5rem; /* mb-6 */
+            transition: padding 0.3s ease, margin-bottom 0.3s ease;
+        }
+        .form-section h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            color: #0369a1; /* sky-700 */
+            margin-bottom: 1rem; /* mb-4 */
+            border-bottom: 1px solid #e2e8f0; /* border-slate-200 */
+            padding-bottom: 0.5rem; /* pb-2 */
+        }
+        .form-field label {
+            display: block;
+            font-weight: 500; /* font-medium */
+            margin-bottom: 0.5rem; /* mb-2 */
+            color: #334155; /* slate-700 */
+            transition: font-size 0.3s ease;
+        }
+        .form-field textarea, .form-field input[type="text"] {
+            width: 100%;
+            border: 1px solid #cbd5e1; /* border-slate-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.75rem; /* p-3 */
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.5;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, min-height 0.3s ease, padding 0.3s ease, font-size 0.3s ease;
+        }
+        .form-field textarea:focus, .form-field input[type="text"]:focus {
+            border-color: #0ea5e9; /* sky-500 */
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); /* ring-2 ring-sky-500/20 */
+            outline: none;
+        }
+        .form-field textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .helper-panel {
+            background-color: white;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+        .suggestion-btn {
+            display: flex; /* For aligning text and delete button */
+            justify-content: space-between; /* For aligning text and delete button */
+            align-items: center; /* For aligning text and delete button */
+            width: 100%;
+            text-align: left;
+            padding: 0.625rem 1rem; /* py-2.5 px-4 */
+            font-size: 0.875rem; /* text-sm */
+            color: #334155; /* slate-700 */
+            background-color: #f1f5f9; /* slate-100 */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            margin-bottom: 0.5rem; /* mb-2 */
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .suggestion-btn:hover {
+            background-color: #e0f2fe; /* sky-100 */
+            border-color: #7dd3fc; /* sky-300 */
+        }
+        .suggestion-btn-custom { /* Style for custom suggestions */
+            background-color: #ccfbf1; /* teal-100 for differentiation */
+            border-color: #5eead4; /* teal-300 */
+        }
+        .suggestion-btn-custom:hover {
+            background-color: #99f6e4; /* teal-200 */
+            border-color: #2dd4bf; /* teal-400 */
+        }
+        .delete-suggestion-btn {
+            background: none; border: none; color: #ef4444; /* red-500 */
+            padding: 0.25rem; margin-left: 0.5rem; cursor: pointer;
+            font-size: 0.75rem; line-height: 1;
+        }
+        .delete-suggestion-btn:hover { color: #dc2626; /* red-600 */ }
 
-    function deleteCustomSuggestionForField(fieldId, suggestionText) {
-        const allSuggestions = getCustomSuggestions();
-        if (allSuggestions[fieldId]) {
-            allSuggestions[fieldId] = allSuggestions[fieldId].filter(s => s !== suggestionText);
-            if (allSuggestions[fieldId].length === 0) {
-                delete allSuggestions[fieldId];
-            }
-            saveCustomSuggestions(allSuggestions);
+        .btn {
+            @apply px-4 py-2 rounded-lg font-semibold text-white shadow-md transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed;
         }
-    }
-    
-    addCustomSuggestionButton.addEventListener('click', () => {
-        if (!activeTextarea || !activeTextarea.id) {
-            showToast("No field selected to add suggestion for.", "error");
-            return;
+        .btn-sm { @apply px-3 py-1.5 text-sm; }
+        .btn-primary { @apply bg-sky-600 hover:bg-sky-700; }
+        .btn-success { @apply bg-emerald-600 hover:bg-emerald-700; }
+        .btn-secondary { @apply bg-slate-500 hover:bg-slate-600; }
+        .btn-danger { @apply bg-red-600 hover:bg-red-700; }
+        .btn-density.active {
+            @apply bg-sky-600 text-white;
         }
-        const suggestionText = customSuggestionInput.value.trim();
-        if (!suggestionText) {
-            showToast("Suggestion text cannot be empty.", "info");
-            return;
+
+        #toast-message {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px; color: white; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000; opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            visibility: hidden;
         }
-        if (addCustomSuggestionForField(activeTextarea.id, suggestionText)) {
-            showToast("Custom suggestion added!", "success");
-            customSuggestionInput.value = '';
-            updateHelperPanel(activeTextarea.id); // Refresh suggestions
-        } else {
-            showToast("This suggestion already exists for this field.", "info");
+        #toast-message.show {
+            opacity: 1; transform: translateX(-50%) translateY(0); visibility: visible;
         }
+        .scrollable-panel::-webkit-scrollbar { width: 6px; }
+        .scrollable-panel::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px;}
+        .scrollable-panel::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px;}
+        .scrollable-panel::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* UI Density Styles */
+        .layout-compact .form-section { padding: 1rem; margin-bottom: 1rem; }
+        .layout-compact .form-section h3 { font-size: 1.1rem; margin-bottom: 0.75rem; padding-bottom: 0.3rem; }
+        .layout-compact .form-field label { font-size: 0.8rem; margin-bottom: 0.25rem; }
+        .layout-compact .form-field textarea, .layout-compact .form-field input[type="text"] { padding: 0.5rem; font-size: 0.8rem; }
+        .layout-compact .form-field textarea { min-height: 60px; }
+
+        .layout-expanded .form-section { padding: 2rem; margin-bottom: 2rem; }
+        .layout-expanded .form-section h3 { font-size: 1.4rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; }
+        .layout-expanded .form-field label { font-size: 1rem; margin-bottom: 0.75rem; }
+        .layout-expanded .form-field textarea, .layout-expanded .form-field input[type="text"] { padding: 1rem; font-size: 0.95rem; }
+        .layout-expanded .form-field textarea { min-height: 150px; }
+
+        .hidden-section { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col h-screen"> <!-- Body will get layout classes -->
+
+    <header class="bg-sky-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="logo_Noteingham.png" alt="NoteingHam Logo" class="h-10 w-10 mr-3"> <!-- LOGO -->
+                <h1 class="text-2xl md:text-3xl font-bold">NoteingHam</h1>
+            </div>
+            <button id="resetNoteButton" class="btn bg-sky-500 hover:bg-sky-400 text-sm">New Note / Reset</button>
+        </div>
+    </header>
+
+    <div class="flex-grow container mx-auto py-4 px-2 md:px-4 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full main-content">
+            <div class="md:col-span-2 overflow-y-auto scrollable-panel pr-2 pb-16">
+                <form id="soapNoteForm">
+                    <section id="generalInfoSection" class="form-section" aria-labelledby="general-info-header">
+                        <h3 id="general-info-header">General Information</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="form-field">
+                                <label for="gi_date">Date</label>
+                                <input type="text" id="gi_date" name="gi_date" placeholder="YYYY-MM-DD">
+                            </div>
+                            <div class="form-field">
+                                <label for="gi_client_id">Client ID / Name</label>
+                                <input type="text" id="gi_client_id" name="gi_client_id" placeholder="e.g., 12345 or Initials">
+                            </div>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="gi_session_focus">Session Focus / Main Topic</label>
+                            <textarea id="gi_session_focus" name="gi_session_focus" placeholder="e.g., Review of coping strategies for anxiety"></textarea>
+                        </div>
+                    </section>
+
+                    <section id="subjectiveSection" class="form-section" aria-labelledby="subjective-header">
+                        <h3 id="subjective-header">S (Subjective)</h3>
+                        <div class="form-field">
+                            <label for="s_main_concerns">Client's Main Concerns, Statements, Presenting Issues</label>
+                            <textarea id="s_main_concerns" name="s_main_concerns" placeholder="Client states, '...' or primary issues reported"></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="s_mood_symptoms">Reported Mood, Symptoms (sleep, appetite), Stress Levels</label>
+                            <textarea id="s_mood_symptoms" name="s_mood_symptoms" placeholder="e.g., Mood: Anxious. Sleep: Poor. Stress: High."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="s_risk">Suicidal/Homicidal Ideation (Client Report)</label>
+                            <textarea id="s_risk" name="s_risk" placeholder="e.g., Denied SI/HI. Reported fleeting thoughts of..."></textarea>
+                        </div>
+                    </section>
+
+                    <section id="objectiveSection" class="form-section" aria-labelledby="objective-header">
+                        <h3 id="objective-header">O (Objective)</h3>
+                        <div class="form-field">
+                            <label for="o_presentation">Appearance, Behavior, Attitude, Motor Activity, Eye Contact</label>
+                            <textarea id="o_presentation" name="o_presentation" placeholder="e.g., Well-groomed, cooperative, restless, good eye contact"></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="o_affect_mood_speech">Observed Affect, Mood, Speech Characteristics</label>
+                            <textarea id="o_affect_mood_speech" name="o_affect_mood_speech" placeholder="e.g., Affect: Congruent. Mood: Euthymic. Speech: Normal rate."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="o_thought_orientation">Thought Process/Content, Orientation</label>
+                            <textarea id="o_thought_orientation" name="o_thought_orientation" placeholder="e.g., Thought process: Logical. Oriented x4."></textarea>
+                        </div>
+                    </section>
+
+                    <section id="assessmentSection" class="form-section" aria-labelledby="assessment-header">
+                        <h3 id="assessment-header">A (Assessment)</h3>
+                        <div class="form-field">
+                            <label for="a_summary_impressions">Summary of Progress, Clinical Impressions, Response to Treatment</label>
+                            <textarea id="a_summary_impressions" name="a_summary_impressions" placeholder="e.g., Making good progress with CBT. Symptoms of GAD appear reduced."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="a_strengths_challenges">Client Strengths and Challenges/Barriers</label>
+                            <textarea id="a_strengths_challenges" name="a_strengths_challenges" placeholder="e.g., Strengths: Motivated. Challenges: Limited social support."></textarea>
+                        </div>
+                         <div class="form-field mt-4">
+                            <label for="a_risk_level_justification">Risk Assessment (Level and Justification)</label>
+                            <textarea id="a_risk_level_justification" name="a_risk_level_justification" placeholder="e.g., Low risk for self-harm, no active SI/HI, protective factors present."></textarea>
+                        </div>
+                    </section>
+
+                    <section id="planSection" class="form-section" aria-labelledby="plan-header">
+                        <h3 id="plan-header">P (Plan)</h3>
+                        <div class="form-field">
+                            <label for="p_interventions_response">Interventions Used This Session & Client's Response</label>
+                            <textarea id="p_interventions_response" name="p_interventions_response" placeholder="e.g., Utilized psychoeducation on anxiety. Client was receptive."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="p_focus_homework">Focus for Next Session, Homework Assigned</label>
+                            <textarea id="p_focus_homework" name="p_focus_homework" placeholder="e.g., Next session: Review thought records. Homework: Complete daily mood log."></textarea>
+                        </div>
+                        <div class="form-field mt-4">
+                            <label for="p_safety_referrals_appt">Safety Planning, Referrals, Next Appointment</label>
+                            <textarea id="p_safety_referrals_appt" name="p_safety_referrals_appt" placeholder="e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD."></textarea>
+                        </div>
+                    </section>
+                </form>
+            </div>
+
+            <aside class="md:col-span-1 h-full flex flex-col helper-panel p-4">
+                <h2 id="helperPanelTitle" class="text-lg font-semibold mb-1 text-sky-600">Suggestions</h2>
+                <p id="helperPanelSubtitle" class="text-xs text-slate-500 mb-3">For: (No field selected)</p>
+                
+                <div id="suggestionsContainer" class="flex-grow overflow-y-auto scrollable-panel pr-1 mb-4">
+                    <p class="text-slate-500 text-sm">Click on a field in the form to see relevant suggestions here.</p>
+                </div>
+
+                <div id="customSuggestionModule" style="display: none;" class="mb-4 pt-4 border-t border-slate-200">
+                    <h3 id="addCustomSuggestionTitle" class="text-md font-semibold mb-2 text-sky-600">Add Custom Suggestion</h3>
+                    <textarea id="customSuggestionInput" class="w-full border border-slate-300 rounded-md p-2 text-sm" rows="2" placeholder="Type your suggestion..."></textarea>
+                    <button id="addCustomSuggestionButton" class="btn btn-primary btn-sm w-full mt-2">Add for this field</button>
+                </div>
+                
+                <div id="settingsSection" class="pt-4 border-t border-slate-200">
+                    <h3 class="text-md font-semibold mb-2 text-sky-600">Display Options</h3>
+                    <div class="mb-3">
+                        <label class="block font-medium text-sm text-slate-700 mb-1">UI Density:</label>
+                        <div class="flex gap-2">
+                            <button data-density="compact" class="btn-density btn btn-secondary btn-sm flex-1">Compact</button>
+                            <button data-density="normal" class="btn-density btn btn-secondary btn-sm flex-1">Normal</button>
+                            <button data-density="expanded" class="btn-density btn btn-secondary btn-sm flex-1">Expanded</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-slate-700 mb-1">Visible Sections:</label>
+                        <div id="visibleSectionsControlsContainer" class="space-y-1">
+                            <!-- Checkboxes will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <button id="clearActiveFieldButton" class="btn btn-secondary w-full mt-4 text-sm">Clear Current Field</button>
+            </aside>
+        </div>
+    </div>
+
+    <footer class="bg-white shadow-upward p-3 border-t border-slate-200">
+        <div class="container mx-auto flex flex-wrap justify-center md:justify-end items-center gap-2 md:gap-3">
+            <button id="compileCopyButton" class="btn btn-success text-sm">Compile & Copy Note</button>
+            <button id="saveDraftButton" class="btn btn-primary text-sm">Save Draft</button>
+            <button id="loadDraftButton" class="btn btn-secondary text-sm">Load Draft</button>
+            <button id="clearFormButton" class="btn btn-danger text-sm">Clear Entire Form</button>
+        </div>
+    </footer>
+
+    <div id="toast-message">Message here</div>
+
+    <script>
+    // JavaScript will be updated in the next step
+    // Placeholder for original script, will be replaced with enhanced version
+    document.addEventListener('DOMContentLoaded', () => {
+        const firstInput = document.getElementById('gi_date');
+        if (firstInput) firstInput.focus();
+        console.log("Basic HTML structure loaded with new elements.");
     });
-
-
-    Object.keys(fieldData).forEach(fieldId => {
-        const element = document.getElementById(fieldId);
-        if (element) {
-            element.addEventListener('focus', () => {
-                activeTextarea = element;
-                updateHelperPanel(fieldId);
-                customSuggestionModule.style.display = 'block';
-                addCustomSuggestionTitle.textContent = `Add for: ${fieldData[fieldId]?.label || 'Current Field'}`;
-            });
-        }
-    });
-    
-    clearActiveFieldButton.addEventListener('click', () => {
-        if (activeTextarea) {
-            activeTextarea.value = '';
-            showToast(`Field "${fieldData[activeTextarea.id]?.label || 'Current'}" cleared.`, 'info');
-            activeTextarea.focus();
-        } else {
-            showToast('No field is currently active.', 'info');
-        }
-    });
-
-    function updateHelperPanel(fieldId) {
-        const data = fieldData[fieldId];
-        if (!data) {
-            helperPanelTitle.textContent = "Suggestions";
-            helperPanelSubtitle.textContent = "For: (No field selected)";
-            suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions for this field.</p>';
-            customSuggestionModule.style.display = 'none';
-            return;
-        }
-
-        helperPanelTitle.textContent = "Suggestions";
-        helperPanelSubtitle.textContent = `For: ${data.label}`;
-        suggestionsContainer.innerHTML = ''; 
-
-        const allFieldSuggestions = getCustomSuggestions();
-        const customSuggestionsForField = allFieldSuggestions[fieldId] || [];
-
-        let hasSuggestions = false;
-
-        if (data.suggestions.length > 0) {
-            hasSuggestions = true;
-            data.suggestions.forEach(suggestionText => {
-                const btn = createSuggestionButton(suggestionText, false);
-                suggestionsContainer.appendChild(btn);
-            });
-        }
-
-        if (customSuggestionsForField.length > 0) {
-            hasSuggestions = true;
-            customSuggestionsForField.forEach(suggestionText => {
-                const btn = createSuggestionButton(suggestionText, true, fieldId);
-                suggestionsContainer.appendChild(btn);
-            });
-        }
-
-        if (!hasSuggestions) {
-            suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions yet. Add your own below!</p>';
-        }
-    }
-
-    function createSuggestionButton(text, isCustom, fieldIdForDelete = null) {
-        const btn = document.createElement('button');
-        btn.className = 'suggestion-btn' + (isCustom ? ' suggestion-btn-custom' : '');
-        
-        const textSpan = document.createElement('span');
-        textSpan.textContent = text;
-        textSpan.style.flexGrow = "1"; // Make text take available space
-        btn.appendChild(textSpan);
-
-        if (isCustom && fieldIdForDelete) {
-            const deleteBtn = document.createElement('button');
-            deleteBtn.innerHTML = '×'; // A simple "x"
-            deleteBtn.className = 'delete-suggestion-btn';
-            deleteBtn.title = 'Delete this custom suggestion';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation(); // Prevent inserting suggestion when deleting
-                if (confirm(`Delete suggestion: "${text}"?`)) {
-                    deleteCustomSuggestionForField(fieldIdForDelete, text);
-                    updateHelperPanel(fieldIdForDelete); // Refresh panel
-                    showToast("Custom suggestion deleted.", "info");
-                }
-            };
-            btn.appendChild(deleteBtn);
-        }
-        
-        btn.addEventListener('click', () => insertSuggestion(text));
-        return btn;
-    }
-
-
-    function insertSuggestion(text) {
-        if (!activeTextarea) return;
-        const currentVal = activeTextarea.value;
-        const cursorPos = activeTextarea.selectionStart;
-        let prefix = "";
-        if (cursorPos > 0 && !/[\s\n]$/.test(currentVal.substring(0, cursorPos))) {
-            prefix = " ";
-        } else if (currentVal.length > 0 && !currentVal.endsWith('\n') && !currentVal.endsWith('\n\n') && !text.startsWith('- ')) {
-            if (!currentVal.endsWith('\n')) prefix = "\n";
-        }
-        const textToInsert = prefix + text;
-        activeTextarea.value = currentVal.substring(0, cursorPos) + textToInsert + currentVal.substring(activeTextarea.selectionEnd);
-        activeTextarea.focus();
-        activeTextarea.selectionStart = activeTextarea.selectionEnd = cursorPos + textToInsert.length;
-    }
-
-    compileCopyButton.addEventListener('click', () => {
-        let compiledNote = "";
-        const uiSettings = loadUISettings();
-        const fieldOrder = [ 
-            { id: 'gi_date', label: 'Date', sectionId: "generalInfoSection" },
-            { id: 'gi_client_id', label: 'Client ID', sectionId: "generalInfoSection" },
-            { id: 'gi_session_focus', label: 'Session Focus', sectionId: "generalInfoSection", sectionBreak: true },
-
-            { section: 'S (Subjective)', sectionId: "subjectiveSection" },
-            { id: 's_main_concerns', label: "Client's Main Concerns", sectionId: "subjectiveSection" },
-            { id: 's_mood_symptoms', label: "Reported Mood & Symptoms", sectionId: "subjectiveSection" },
-            { id: 's_risk', label: "Suicidal/Homicidal Ideation (Report)" , sectionId: "subjectiveSection", sectionBreak: true},
-
-            { section: 'O (Objective)', sectionId: "objectiveSection" },
-            { id: 'o_presentation', label: "Appearance & Behavior", sectionId: "objectiveSection" },
-            { id: 'o_affect_mood_speech', label: "Observed Affect, Mood & Speech", sectionId: "objectiveSection" },
-            { id: 'o_thought_orientation', label: "Thought Process & Orientation", sectionId: "objectiveSection", sectionBreak: true },
-
-            { section: 'A (Assessment)', sectionId: "assessmentSection" },
-            { id: 'a_summary_impressions', label: "Summary & Clinical Impressions", sectionId: "assessmentSection" },
-            { id: 'a_strengths_challenges', label: "Strengths & Challenges", sectionId: "assessmentSection" },
-            { id: 'a_risk_level_justification', label: "Risk Assessment", sectionId: "assessmentSection", sectionBreak: true },
-
-            { section: 'P (Plan)', sectionId: "planSection" },
-            { id: 'p_interventions_response', label: "Interventions & Response", sectionId: "planSection" },
-            { id: 'p_focus_homework', label: "Next Session Focus & Homework", sectionId: "planSection" },
-            { id: 'p_safety_referrals_appt', label: "Safety, Referrals & Next Appointment", sectionId: "planSection" }
-        ];
-        
-        let currentSectionHeader = "";
-        fieldOrder.forEach(item => {
-            // Skip item if its section is not visible (unless it's a section header itself)
-            if (item.sectionId && uiSettings.sectionsVisible && uiSettings.sectionsVisible[item.sectionId] === false) {
-                 return;
-            }
-
-            if (item.section) {
-                // Only add section header if it's different from the last one and it's visible
-                if (currentSectionHeader !== item.section && (uiSettings.sectionsVisible[item.sectionId] !== false) ) {
-                    if (compiledNote.length > 0 && !compiledNote.endsWith("\n\n")) compiledNote += "\n";
-                    compiledNote += `${item.section}:\n`;
-                    currentSectionHeader = item.section;
-                }
-            } else {
-                const element = document.getElementById(item.id);
-                const value = element ? element.value.trim() : '';
-                if (value) {
-                    if (item.label.includes("Date") || item.label.includes("Client ID") || item.label.includes("Session Focus")) {
-                         compiledNote += `${item.label}: ${value}\n`;
-                    } else {
-                         compiledNote += `- ${item.label}: ${value}\n`;
-                    }
-                }
-                if (item.sectionBreak && compiledNote.length > 0 && !compiledNote.endsWith("\n\n") && !compiledNote.endsWith(":\n")) {
-                     compiledNote += "\n";
-                }
-            }
-        });
-
-        if (compiledNote.trim() === "") {
-            showToast("Note is empty or all visible sections are empty. Nothing to copy.", "error");
-            return;
-        }
-        navigator.clipboard.writeText(compiledNote.trim())
-            .then(() => showToast("Formatted note copied to clipboard!"))
-            .catch(err => {
-                console.error('Failed to copy: ', err);
-                showToast("Failed to copy. Please try manual copy.", "error");
-            });
-    });
-
-    function getFormData() {
-        const data = {};
-        Object.keys(fieldData).forEach(id => {
-            const element = document.getElementById(id);
-            if (element) data[id] = element.value;
-        });
-        return data;
-    }
-
-    function setFormData(data) {
-        Object.keys(data).forEach(id => {
-            const element = document.getElementById(id);
-            if (element) element.value = data[id] || '';
-        });
-    }
-
-    saveDraftButton.addEventListener('click', () => {
-        try {
-            const dataToSave = getFormData();
-            if (Object.values(dataToSave).every(val => val.trim() === "")) {
-                 showToast("Nothing to save. Form is empty.", "info");
-                 return;
-            }
-            localStorage.setItem('therapistSOAPNoteDraft', JSON.stringify(dataToSave));
-            showToast("Draft saved locally!");
-        } catch (e) {
-            console.error("Error saving to local storage:", e);
-            showToast("Could not save draft. Storage might be full/disabled.", "error");
-        }
-    });
-
-    loadDraftButton.addEventListener('click', () => {
-        const currentData = getFormData();
-        if (Object.values(currentData).some(val => val.trim() !== "") && !confirm("Loading a draft will overwrite current content. Continue?")) {
-             return;
-        }
-        try {
-            const savedData = localStorage.getItem('therapistSOAPNoteDraft');
-            if (savedData) {
-                setFormData(JSON.parse(savedData));
-                showToast("Draft loaded from local storage!");
-            } else {
-                showToast("No saved draft found.", "info");
-            }
-        } catch (e) {
-            console.error("Error loading from local storage:", e);
-            showToast("Could not load draft. Data might be corrupted.", "error");
-        }
-    });
-    
-    const clearTheForm = () => {
-        form.reset(); 
-        Object.keys(fieldData).forEach(id => {
-            const element = document.getElementById(id);
-            if (element && element.tagName === 'TEXTAREA') element.value = '';
-        });
-        helperPanelTitle.textContent = "Suggestions";
-        helperPanelSubtitle.textContent = "For: (No field selected)";
-        suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field in the form to see relevant suggestions here.</p>';
-        customSuggestionModule.style.display = 'none';
-        activeTextarea = null;
-        if (document.getElementById('gi_date')) document.getElementById('gi_date').focus();
-    };
-
-    clearFormButton.addEventListener('click', () => {
-        if (confirm("Are you sure you want to clear the entire form? This cannot be undone.")) {
-            clearTheForm();
-            showToast("Form cleared.");
-        }
-    });
-    
-    resetNoteButton.addEventListener('click', () => {
-         if (confirm("Are you sure you want to start a new note? This will clear the entire form.")) {
-            clearTheForm();
-            showToast("New note started. Form cleared.");
-        }
-    });
-
-    let toastTimeout;
-    function showToast(message, type = 'success') {
-        clearTimeout(toastTimeout);
-        toastMessage.textContent = message;
-        toastMessage.className = 'show'; 
-        if (type === 'error') toastMessage.style.backgroundColor = '#dc2626'; // red-600
-        else if (type === 'info') toastMessage.style.backgroundColor = '#2563eb'; // blue-600
-        else toastMessage.style.backgroundColor = '#16a34a'; // green-600
-        toastTimeout = setTimeout(() => {
-            toastMessage.className = toastMessage.className.replace('show', '');
-        }, 3000);
-    }
-    
-    // --- UI Settings (Density & Section Visibility) ---
-    function loadUISettings() {
-        const settings = localStorage.getItem(UI_SETTINGS_KEY);
-        const defaults = {
-            layout: 'normal',
-            sectionsVisible: {
-                generalInfoSection: true,
-                subjectiveSection: true,
-                objectiveSection: true,
-                assessmentSection: true,
-                planSection: true
-            }
-        };
-        if (settings) {
-            const loaded = JSON.parse(settings);
-            // Ensure all sections have a visibility setting, even if new ones are added later
-            Object.keys(defaults.sectionsVisible).forEach(key => {
-                if (loaded.sectionsVisible && typeof loaded.sectionsVisible[key] === 'undefined') {
-                    loaded.sectionsVisible[key] = defaults.sectionsVisible[key];
-                }
-            });
-             if(!loaded.sectionsVisible) loaded.sectionsVisible = defaults.sectionsVisible; // if sectionVisible is missing entirely
-            return { ...defaults, ...loaded };
-        }
-        return defaults;
-    }
-
-    function saveUISetting(key, value) {
-        const settings = loadUISettings();
-        settings[key] = value;
-        localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(settings));
-    }
-    
-    function applyUISettings() {
-        const settings = loadUISettings();
-        // Apply layout
-        document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
-        document.body.classList.add(`layout-${settings.layout || 'normal'}`);
-        document.querySelectorAll('.btn-density').forEach(btn => {
-            btn.classList.remove('active', 'bg-sky-600', 'text-white'); // remove active style
-             btn.classList.add('btn-secondary'); // ensure base style
-            if (btn.dataset.density === (settings.layout || 'normal')) {
-                btn.classList.add('active', 'bg-sky-600', 'text-white');
-                 btn.classList.remove('btn-secondary');
-            }
-        });
-
-        // Apply section visibility
-        Object.entries(settings.sectionsVisible).forEach(([sectionId, isVisible]) => {
-            const sectionElement = document.getElementById(sectionId);
-            const checkbox = document.querySelector(`#visibleSectionsControlsContainer input[data-section-id="${sectionId}"]`);
-            if (sectionElement) {
-                sectionElement.classList.toggle('hidden-section', !isVisible);
-            }
-            if (checkbox) checkbox.checked = isVisible;
-        });
-    }
-
-    function initUISettingsControls() {
-        // Density buttons
-        document.querySelectorAll('.btn-density').forEach(button => {
-            button.addEventListener('click', () => {
-                const newDensity = button.dataset.density;
-                saveUISetting('layout', newDensity);
-                applyUISettings();
-            });
-        });
-
-        // Section visibility checkboxes
-        const visibleSectionsControlsContainer = document.getElementById('visibleSectionsControlsContainer');
-        formSections.forEach(section => {
-            const div = document.createElement('div');
-            div.className = 'flex items-center';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `toggle-${section.id}`;
-            checkbox.dataset.sectionId = section.id;
-            checkbox.className = 'mr-2 h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500';
-            
-            const label = document.createElement('label');
-            label.htmlFor = `toggle-${section.id}`;
-            label.textContent = section.label;
-            label.className = 'text-sm text-slate-700';
-
-            div.appendChild(checkbox);
-            div.appendChild(label);
-            visibleSectionsControlsContainer.appendChild(div);
-
-            checkbox.addEventListener('change', (e) => {
-                const currentSettings = loadUISettings();
-                currentSettings.sectionsVisible[section.id] = e.target.checked;
-                saveUISetting('sectionsVisible', currentSettings.sectionsVisible);
-                applyUISettings(); // Re-apply to show/hide section immediately
-            });
-        });
-    }
-
-    // Initial Load
-    initUISettingsControls();
-    applyUISettings(); 
-    const firstInput = document.getElementById('gi_date');
-    if (firstInput) firstInput.focus();
-    
-    // If no field is focused initially, hide the custom suggestion module
-    if (!activeTextarea) {
-        customSuggestionModule.style.display = 'none';
-        helperPanelSubtitle.textContent = "For: (No field selected)";
-    }
-});
-</script>
+    </script>
+</body>
+</html>
