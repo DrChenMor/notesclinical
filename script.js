@@ -480,4 +480,3 @@ document.addEventListener('DOMContentLoaded', () => {
         helperPanelSubtitle.textContent = "For: (No field selected)";
     }
 });
-</script>
