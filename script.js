@@ -16,18 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDraftButton = document.getElementById('loadDraftButton');
     const clearFormButton = document.getElementById('clearFormButton');
     const resetNoteButton = document.getElementById('resetNoteButton');
-    // const clearActiveFieldButton = document.getElementById('clearActiveFieldButton'); // REMOVED
+    // clearActiveFieldButton is removed
     const toastMessage = document.getElementById('toast-message');
     const newSectionNameInput = document.getElementById('newSectionNameInput');
     const addNewSectionButton = document.getElementById('addNewSectionButton');
     const targetSectionSelect = document.getElementById('targetSectionSelect');
     const newFieldNameInput = document.getElementById('newFieldNameInput');
     const addNewFieldButton = document.getElementById('addNewFieldButton');
-    
     const toggleVisibleSectionsButton = document.getElementById('toggleVisibleSectionsButton');
     const visibleSectionsPopover = document.getElementById('visibleSectionsPopover');
     const visibleSectionsControlsContainer = document.getElementById('visibleSectionsControlsContainer');
-
     const suggestionsHelperTabButton = document.getElementById('suggestionsHelperTabButton');
     const templateEditorHelperTabButton = document.getElementById('templateEditorHelperTabButton');
     const suggestionsHelperTabContent = document.getElementById('suggestionsHelperTabContent');
@@ -36,12 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State & Keys ---
     let activeTextarea = null;
     let toastTimeout; 
-
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v7';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v7';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v7';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v7';
-
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v8';
+    const UI_SETTINGS_KEY = 'noteinghamUISettings_v8';
+    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v8';
+    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v8';
     let masterFieldData = {}; 
     let masterSectionData = [];
 
@@ -73,11 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ]}
     ];
 
-    // --- Helper Functions (Full Code) ---
-    function generateUniqueId(prefix = 'id_') { 
+    // --- Helper Functions ---
+    function generateUniqueId(prefix = 'id_') { /* ... Full code ... */ 
         return prefix + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    function showToast(message, type = 'success') { 
+    function showToast(message, type = 'success') { /* ... Full code ... */ 
         clearTimeout(toastTimeout); 
         toastMessage.textContent = message; toastMessage.className = 'show';
         if (type === 'error') toastMessage.style.backgroundColor = '#dc2626';
@@ -87,14 +83,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Dynamic Form Rendering & Template Management (Full Code) ---
-    function getCustomTemplate() { 
+    function getCustomTemplate() { /* ... Full code ... */ 
         const template = localStorage.getItem(CUSTOM_TEMPLATE_KEY);
         return template ? JSON.parse(template) : { sections: [] };
     }
-    function saveCustomTemplate(customTemplate) { 
+    function saveCustomTemplate(customTemplate) { /* ... Full code ... */ 
         localStorage.setItem(CUSTOM_TEMPLATE_KEY, JSON.stringify(customTemplate));
     }
-    function buildMasterData() { 
+    function buildMasterData() { /* ... Full code ... */ 
         masterFieldData = {}; masterSectionData = [];
         standardSections.forEach(section => {
             const sectionMeta = { id: section.id, title: section.title, isCustom: false, fieldIds: [] };
@@ -127,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    function renderForm() { 
+    function renderForm() { /* ... Full code ... */ 
         if (!soapNoteForm) { console.error("soapNoteForm not found!"); return; }
         soapNoteForm.innerHTML = ''; 
         masterSectionData.forEach(sectionMeta => {
@@ -149,34 +145,28 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionMeta.fieldIds.forEach((fieldId) => {
                 const field = masterFieldData[fieldId];
                 if (!field) { console.warn(`Field data missing: ${fieldId}`); return; }
-                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field'; // Base class
+                const formFieldDiv = document.createElement('div'); formFieldDiv.className = 'form-field'; 
                 let addedToGrid = false;
-                // --- Grid Logic ---
                 if (sectionMeta.id === 'generalInfoSection' && field.type === 'text' && fieldCountInGrid < 2) {
                     if (!currentGridDiv) {
                         currentGridDiv = document.createElement('div'); currentGridDiv.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
                         const h3El = sectionElement.querySelector('h3'); sectionElement.insertBefore(currentGridDiv, h3El.nextElementSibling);
                     }
-                    currentGridDiv.appendChild(formFieldDiv); // Add the field div to the grid
-                    fieldCountInGrid++; addedToGrid = true;
+                    currentGridDiv.appendChild(formFieldDiv); fieldCountInGrid++; addedToGrid = true;
                 } else {
-                    // If not in grid, add margin-top if it's not the very first field element added to the section
-                     if (sectionElement.querySelectorAll('.form-field, .grid').length > 1) { // Check if more than just h3 exists
+                    const isFirstNonH3Element = sectionElement.children.length <= 2; // Only h3 and potentially delete btn exist
+                     if (!isFirstNonH3Element) {
                          formFieldDiv.classList.add('mt-4');
                      }
                     sectionElement.appendChild(formFieldDiv);
                 }
-                // --- Label ---
                 const labelEl = document.createElement('label');
                 labelEl.htmlFor = fieldId; labelEl.textContent = field.label; formFieldDiv.appendChild(labelEl);
-                // --- Input/Textarea ---
                 let inputEl;
                 if (field.type === 'textarea') inputEl = document.createElement('textarea');
                 else { inputEl = document.createElement('input'); inputEl.type = 'text'; }
                 inputEl.id = fieldId; inputEl.name = fieldId; inputEl.placeholder = field.placeholder;
-                inputEl.classList.add('form-input'); // Add base input styling class
-                 // Add density-specific padding/height later via applyUISettings or keep base style
-                formFieldDiv.appendChild(inputEl);
+                inputEl.classList.add('form-input'); formFieldDiv.appendChild(inputEl);
                 inputEl.addEventListener('focus', () => {
                     activeTextarea = inputEl; updateHelperPanel(fieldId);
                     if (customSuggestionModule) customSuggestionModule.style.display = 'block';
@@ -188,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         populateTargetSectionSelect(); initSectionVisibilityControls(); applyUISettings(); 
     }
-    function handleDeleteCustomSection(sectionId, sectionTitle) { 
+    function handleDeleteCustomSection(sectionId, sectionTitle) { /* ... Full code ... */ 
         if (!confirm(`Delete section "${sectionTitle}"? This cannot be undone.`)) return;
         const customTemplate = getCustomTemplate();
         customTemplate.sections = customTemplate.sections.filter(s => s.id !== sectionId);
@@ -200,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         buildMasterData(); renderForm();
         showToast(`Section "${sectionTitle}" deleted.`, 'success');
     }
-    function populateTargetSectionSelect() { 
+    function populateTargetSectionSelect() { /* ... Full code ... */ 
         if (!targetSectionSelect) return;
         targetSectionSelect.innerHTML = '';
         masterSectionData.forEach(section => {
@@ -209,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             targetSectionSelect.appendChild(option);
         });
     }
-    if (addNewSectionButton) { 
+    if (addNewSectionButton) { /* ... Full code ... */ 
         addNewSectionButton.addEventListener('click', () => {
             const sectionName = newSectionNameInput.value.trim();
             if (!sectionName) { showToast("Section title empty.", "info"); return; }
@@ -220,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("New section added!", "success");
         });
     }
-    if (addNewFieldButton) { 
+    if (addNewFieldButton) { /* ... Full code ... */ 
         addNewFieldButton.addEventListener('click', () => {
             const fieldLabel = newFieldNameInput.value.trim(); const selectedSectionId = targetSectionSelect.value;
             if (!fieldLabel) { showToast("Field label empty.", "info"); return; }
@@ -242,14 +232,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Helper Panel Tab Navigation (Full Code) ---
-    function setupHelperPanelTabs() {
+    function setupHelperPanelTabs() { /* ... Full code ... */ 
         const tabButtons = [suggestionsHelperTabButton, templateEditorHelperTabButton].filter(Boolean); 
         const tabContents = [suggestionsHelperTabContent, templateEditorHelperTabContent].filter(Boolean);
         if (tabButtons.length === 0 || tabContents.length === 0 || tabButtons.length !== tabContents.length) {
-            console.error("Helper panel tab buttons or content not found/mismatch."); return;
+            console.error("Helper panel tab buttons/content mismatch."); return;
         }
         tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent potential default button behavior
                 // Deactivate others
                 tabButtons.forEach(btn => btn.classList.remove('active-tab', 'border-sky-500', 'text-sky-600'));
                 tabContents.forEach(content => content.classList.remove('active'));
@@ -261,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 else console.error(`Target content not found: ${targetContentId}`);
             });
         });
-        // Set initial active tab (assuming first one has 'active-tab' in HTML)
          let activeTabFound = false;
          tabButtons.forEach(button => {
              if(button.classList.contains('active-tab')) {
@@ -270,14 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
                  activeTabFound = true;
              }
          });
-         // Fallback if no tab is initially active
-         if(!activeTabFound && suggestionsHelperTabButton) {
-             suggestionsHelperTabButton.click();
-         }
+         if(!activeTabFound && suggestionsHelperTabButton) suggestionsHelperTabButton.click(); 
     }
 
     // --- Download/Upload & Draft Management (Full Code) ---
-    function generateFilename(baseName, extension) { 
+    function generateFilename(baseName, extension) { /* ... Full code ... */ 
         const dateEl = document.getElementById('gi_date'); const clientIdEl = document.getElementById('gi_client_id');
         let dateStr = dateEl && dateEl.value ? dateEl.value.replace(/-/g, '') : new Date().toISOString().slice(0,10).replace(/-/g, '');
         if (!/^\d{8}$/.test(dateStr) && !/^\d{4}\d{2}\d{2}$/.test(dateStr)) dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
@@ -285,12 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!clientIdStr) clientIdStr = 'NoClient';
         return `NoteingHam_${baseName}_${dateStr}_${clientIdStr}.${extension}`;
     }
-    function triggerDownload(filename, data, mimeType) { 
+    function triggerDownload(filename, data, mimeType) { /* ... Full code ... */ 
         const blob = new Blob([data], { type: mimeType }); const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = filename;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
-    if (downloadNoteButton) { 
+    if (downloadNoteButton) { /* ... Full code ... */ 
         downloadNoteButton.addEventListener('click', () => {
             let htmlNote = `<html><head><meta charset="UTF-8"><title>SOAP Note</title><style>body{font-family:Arial,sans-serif;} h3{margin-top:1em;margin-bottom:0.5em;} p{margin:0.2em 0;}</style></head><body>`;
             const uiSettings = loadUISettings(); let contentAdded = false;
@@ -310,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Note downloaded!", "success");
         });
     }
-    if (downloadDraftButton) { 
+    if (downloadDraftButton) { /* ... Full code ... */ 
         downloadDraftButton.addEventListener('click', () => {
             const dataToSave = getFormData();
             if (Object.values(dataToSave).every(val => val.trim() === "")) { showToast("Nothing to download.", "info"); return; }
@@ -318,10 +305,10 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerDownload(filename, jsonData, 'application/json'); showToast("Draft downloaded!", "success");
         });
     }
-    if (uploadDraftButton) { 
+    if (uploadDraftButton) { /* ... Full code ... */ 
         uploadDraftButton.addEventListener('click', () => uploadDraftInput.click() );
     }
-    if (uploadDraftInput) { 
+    if (uploadDraftInput) { /* ... Full code ... */ 
         uploadDraftInput.addEventListener('change', (event) => {
             const file = event.target.files[0]; if (!file) return;
             const currentData = getFormData();
@@ -341,21 +328,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Custom Suggestions, Field Focus, Helper Panel (Full Code) ---
-    function getCustomSuggestions() { 
+    function getCustomSuggestions() { /* ... Full code ... */ 
         const suggestions = localStorage.getItem(CUSTOM_SUGGESTIONS_KEY);
         return suggestions ? JSON.parse(suggestions) : {};
     }
-    function saveCustomSuggestions(allSuggestions) { 
+    function saveCustomSuggestions(allSuggestions) { /* ... Full code ... */ 
         localStorage.setItem(CUSTOM_SUGGESTIONS_KEY, JSON.stringify(allSuggestions));
     }
-    function addCustomSuggestionForField(fieldId, suggestionText) { 
+    function addCustomSuggestionForField(fieldId, suggestionText) { /* ... Full code ... */ 
         const allSuggestions = getCustomSuggestions();
         if (!allSuggestions[fieldId]) allSuggestions[fieldId] = [];
         if (!allSuggestions[fieldId].includes(suggestionText)) {
             allSuggestions[fieldId].push(suggestionText); saveCustomSuggestions(allSuggestions); return true;
         } return false;
     }
-    function deleteCustomSuggestionForField(fieldId, suggestionText) { 
+    function deleteCustomSuggestionForField(fieldId, suggestionText) { /* ... Full code ... */ 
         const allSuggestions = getCustomSuggestions();
         if (allSuggestions[fieldId]) {
             allSuggestions[fieldId] = allSuggestions[fieldId].filter(s => s !== suggestionText);
@@ -363,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveCustomSuggestions(allSuggestions);
         }
     }
-    if (addCustomSuggestionButton) { 
+    if (addCustomSuggestionButton) { /* ... Full code ... */ 
         addCustomSuggestionButton.addEventListener('click', () => {
             if (!activeTextarea || !activeTextarea.id) { showToast("No field selected.", "error"); return; }
             const suggestionText = customSuggestionInput.value.trim();
@@ -375,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Removed Clear Active Field Button Listener
     
-    function updateHelperPanel(fieldId) { 
+    function updateHelperPanel(fieldId) { /* ... Full code ... */ 
         const fieldMeta = masterFieldData[fieldId];
         if (!fieldMeta || !helperPanelSubtitle || !suggestionsContainer) return;
         helperPanelSubtitle.textContent = `For: ${fieldMeta.label}`;
@@ -391,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!hasSuggestions) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions. Add your own!</p>';
     }
-    function createSuggestionButton(text, isCustom, fieldId) { 
+    function createSuggestionButton(text, isCustom, fieldId) { /* ... Full code ... */ 
         const btn = document.createElement('button');
         btn.className = 'suggestion-btn' + (isCustom ? ' suggestion-btn-custom' : '');
         const textSpan = document.createElement('span');
@@ -409,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         btn.addEventListener('click', () => insertSuggestion(text)); return btn;
     }
-    function insertSuggestion(text) { 
+    function insertSuggestion(text) { /* ... Full code ... */ 
         if (!activeTextarea) return;
         const currentVal = activeTextarea.value; const cursorPos = activeTextarea.selectionStart; let prefix = "";
         if (cursorPos > 0 && !/[\s\n]$/.test(currentVal.substring(0, cursorPos))) prefix = " ";
@@ -422,12 +409,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Form Data Get/Set (Full Code) ---
-    function getFormData() { 
+    function getFormData() { /* ... Full code ... */ 
         const data = {};
         Object.keys(masterFieldData).forEach(id => { const element = document.getElementById(id); if (element) data[id] = element.value; });
         return data;
     }
-    function setFormData(data) { 
+    function setFormData(data) { /* ... Full code ... */ 
         Object.keys(masterFieldData).forEach(id => {
             const element = document.getElementById(id);
             if (element && typeof data[id] !== 'undefined') element.value = data[id] || '';
@@ -435,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Local Storage Draft (Full Code) ---
-    if (saveDraftButton) { 
+    if (saveDraftButton) { /* ... Full code ... */ 
         saveDraftButton.addEventListener('click', () => {
             try {
                 const dataToSave = getFormData();
@@ -444,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { console.error("Err save draft:", e); showToast("Could not save.", "error"); }
         });
     }
-    if (loadDraftButton) { 
+    if (loadDraftButton) { /* ... Full code ... */ 
         loadDraftButton.addEventListener('click', () => {
             const currentData = getFormData();
             if (Object.values(currentData).some(val => val.trim() !== "") && !confirm("Overwrite current?")) return;
@@ -458,23 +445,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Clear/Reset Form (Full Code) ---
-    const clearTheForm = () => { 
+    const clearTheForm = () => { /* ... Full code ... */ 
         Object.keys(masterFieldData).forEach(id => { const element = document.getElementById(id); if (element) element.value = ''; });
         if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
         if(suggestionsContainer) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field...</p>';
         if(customSuggestionModule) customSuggestionModule.style.display = 'none'; activeTextarea = null;
         const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
-        if (firstStandardFieldId && document.getElementById(firstStandardFieldId)) document.getElementById(firstStandardFieldId).focus();
+        // Remove auto-focus on clear
+        // if (firstStandardFieldId && document.getElementById(firstStandardFieldId)) document.getElementById(firstStandardFieldId).focus();
     };
-    if (clearFormButton) { 
+    if (clearFormButton) { /* ... Full code ... */ 
         clearFormButton.addEventListener('click', () => { if (confirm("Clear entire form?")) { clearTheForm(); showToast("Form cleared."); } });
     }
-    if (resetNoteButton) { 
+    if (resetNoteButton) { /* ... Full code ... */ 
         resetNoteButton.addEventListener('click', () => { if (confirm("Start new (clears form)?")) { clearTheForm(); showToast("New note. Form cleared."); } });
     }
 
     // --- UI Settings (Density & Section Visibility - Full Code) ---
-    function loadUISettings() { 
+    function loadUISettings() { /* ... Full code ... */ 
         const settings = localStorage.getItem(UI_SETTINGS_KEY);
         let defaultSectionsVisible = {}; masterSectionData.forEach(s => defaultSectionsVisible[s.id] = true); 
         const defaults = { layout: 'normal', sectionsVisible: defaultSectionsVisible };
@@ -485,22 +473,31 @@ document.addEventListener('DOMContentLoaded', () => {
             loaded.sectionsVisible = mergedSectionsVisible; return { ...defaults, ...loaded };
         } return defaults;
     }
-    function saveUISetting(key, value) { 
+    function saveUISetting(key, value) { /* ... Full code ... */ 
         const settings = loadUISettings();
         settings[key] = value; localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(settings));
     }
-    function applyUISettings() { 
+    function applyUISettings() { /* ... Full code ... */ 
         const settings = loadUISettings();
+        // Apply layout density class to body
         document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
         document.body.classList.add(`layout-${settings.layout || 'normal'}`);
-        document.querySelectorAll('.top-controls-bar .btn-density').forEach(btn => { // Target density buttons in top bar
-            btn.classList.remove('active', 'bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
-            btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50'); 
-            if (btn.dataset.density === (settings.layout || 'normal')) {
-                btn.classList.add('active', 'bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
-                btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
-            }
+        
+        // Update density button active state
+        document.querySelectorAll('.top-controls-bar .btn-density').forEach(btn => { 
+            const isActive = btn.dataset.density === (settings.layout || 'normal');
+            btn.classList.toggle('active', isActive);
+             // Toggle explicit styles based on active state
+            if (isActive) {
+                 btn.classList.add('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
+                 btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
+             } else {
+                 btn.classList.remove('bg-sky-600', 'text-white', 'hover:bg-sky-700', 'border-sky-600');
+                 btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700', 'hover:bg-slate-50');
+             }
         });
+
+        // Apply section visibility
         if (settings.sectionsVisible) {
             Object.entries(settings.sectionsVisible).forEach(([sectionId, isVisible]) => {
                 const sectionElement = document.getElementById(sectionId);
@@ -509,19 +506,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkbox) checkbox.checked = !!isVisible; 
             });
         }
-         // Adjust input/textarea padding based on density (example)
-         document.querySelectorAll('.form-input').forEach(input => {
-            input.classList.remove('p-2', 'p-4', 'p-1'); // Remove old padding if necessary
-             if(settings.layout === 'compact') {
-                input.classList.add('p-1'); // Example compact padding
-             } else if (settings.layout === 'expanded') {
-                 input.classList.add('p-4'); // Example expanded padding
-             } else {
-                 input.classList.add('p-2'); // Normal padding ( Tailwind default for .form-input adjusted if needed)
-             }
-         });
+        // Note: Density-specific padding/height for inputs is now handled by CSS rules like .layout-compact .form-input { padding: ... }
     }
-    function initSectionVisibilityControls() { 
+    function initSectionVisibilityControls() { /* ... Full code ... */ 
         if (!visibleSectionsControlsContainer) return;
         visibleSectionsControlsContainer.innerHTML = ''; 
         masterSectionData.forEach(section => {
@@ -540,14 +527,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    function initDensityControls() { 
+    function initDensityControls() { /* ... Full code ... */ 
          document.querySelectorAll('.top-controls-bar .btn-density').forEach(button => { 
             button.addEventListener('click', () => {
                 saveUISetting('layout', button.dataset.density); applyUISettings();
             });
         });
     }
-    if (toggleVisibleSectionsButton && visibleSectionsPopover) { 
+    if (toggleVisibleSectionsButton && visibleSectionsPopover) { /* ... Full code ... */ 
         toggleVisibleSectionsButton.addEventListener('click', (event) => {
             event.stopPropagation(); visibleSectionsPopover.classList.toggle('active');
         });
@@ -565,14 +552,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupHelperPanelTabs(); 
     initDensityControls(); 
     
-    const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
-    if (firstStandardFieldId) {
-        const firstEl = document.getElementById(firstStandardFieldId);
-        // Don't auto-focus initially, let user click
-        // if (firstEl) firstEl.focus(); 
-    }
+    // Restore active state for density buttons on load
+    applyUISettings(); // Call applyUISettings again after everything is initialized to set correct initial states
+
     if (!activeTextarea && customSuggestionModule) {
         customSuggestionModule.style.display = 'none';
-        if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
+        if(helperPanelSubtitle) helperPanelSubtitle.textContent = "Select a field for suggestions";
     }
 });
