@@ -1,0 +1,483 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('soapNoteForm');
+    const helperPanelTitle = document.getElementById('helperPanelTitle');
+    const helperPanelSubtitle = document.getElementById('helperPanelSubtitle');
+    const suggestionsContainer = document.getElementById('suggestionsContainer');
+    
+    const customSuggestionModule = document.getElementById('customSuggestionModule');
+    const addCustomSuggestionTitle = document.getElementById('addCustomSuggestionTitle');
+    const customSuggestionInput = document.getElementById('customSuggestionInput');
+    const addCustomSuggestionButton = document.getElementById('addCustomSuggestionButton');
+
+    const compileCopyButton = document.getElementById('compileCopyButton');
+    const saveDraftButton = document.getElementById('saveDraftButton');
+    const loadDraftButton = document.getElementById('loadDraftButton');
+    const clearFormButton = document.getElementById('clearFormButton');
+    const resetNoteButton = document.getElementById('resetNoteButton');
+    const clearActiveFieldButton = document.getElementById('clearActiveFieldButton');
+    const toastMessage = document.getElementById('toast-message');
+
+    let activeTextarea = null;
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions';
+    const UI_SETTINGS_KEY = 'noteinghamUISettings';
+
+    // Field definitions: id, label for helper, and array of suggestions
+    const fieldData = {
+        gi_date: { label: "Date", suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "], sectionId: "generalInfoSection" },
+        gi_client_id: { label: "Client ID / Name", suggestions: ["Client ID: ", "Client Initials: "], sectionId: "generalInfoSection" },
+        gi_session_focus: { label: "Session Focus", suggestions: ["Session focused on reviewing coping strategies for [issue].", "Exploration of [topic, e.g., recent stressors].", "Follow-up on [previous topic/homework].", "Psychoeducation regarding [condition/skill].", "Goal setting for [area]."], sectionId: "generalInfoSection" },
+        s_main_concerns: { label: "Client's Main Concerns", suggestions: ["Client states, \"[Quote client's words here]\".", "Client reported primary concerns regarding [topic1] and [topic2].", "The main issue discussed was [issue].", "Client expressed distress about [situation].", "Client presented with concerns about [symptom/problem]."], sectionId: "subjectiveSection" },
+        s_mood_symptoms: { label: "Reported Mood & Symptoms", suggestions: ["Client reported mood as [e.g., anxious, depressed, stable, fair, 7/10].", "Sleep reported as [e.g., poor, adequate, 6 hours, restless].", "Appetite reported as [e.g., good, decreased, increased].", "Energy levels described as [e.g., low, moderate, good].", "Reported experiencing [symptom, e.g., headaches, irritability, lack of motivation].", "Stress level reported as [e.g., high, manageable, X/10]."], sectionId: "subjectiveSection" },
+        s_risk: { label: "Suicidal/Homicidal Ideation (Client Report)", suggestions: ["Client denied any suicidal or homicidal ideation, intent, or plan.", "Client reported fleeting thoughts of [suicide/self-harm] but denied intent or plan.", "No SI/HI reported by client.", "Client was directly asked about SI/HI and denied.", "Safety plan discussed in relation to reported thoughts."], sectionId: "subjectiveSection" },
+        o_presentation: { label: "Appearance & Behavior", suggestions: ["Client presented as [e.g., well-groomed, casually dressed, disheveled].", "Behavior was [e.g., cooperative, restless, withdrawn, engaged].", "Attitude towards therapist was [e.g., open, guarded, friendly].", "Motor activity was [e.g., within normal limits, agitated, slowed].", "Eye contact was [e.g., good, fair, poor, fleeting]."], sectionId: "objectiveSection" },
+        o_affect_mood_speech: { label: "Observed Affect, Mood & Speech", suggestions: ["Affect observed as [e.g., congruent with mood, constricted, flat, labile, broad].", "Observed mood appeared [e.g., euthymic, anxious, dysphoric, irritable].", "Speech was [e.g., clear and coherent, pressured, slow, soft, loud, normal rate and rhythm].", "Vocal tone was [e.g., monotonous, expressive]."], sectionId: "objectiveSection" },
+        o_thought_orientation: { label: "Thought Process & Orientation", suggestions: ["Thought process appeared [e.g., logical, coherent, tangential, circumstantial, disorganized].", "Thought content revealed [e.g., no evidence of delusions or hallucinations, preoccupation with X].", "Client was alert and oriented to [person, place, time, situation - specify, e.g., x3, x4].", "Cognitive functioning appeared [e.g., intact, impaired in X area].", "Insight judged to be [e.g., good, fair, poor, limited].", "Judgment appeared [e.g., good, fair, impaired]."], sectionId: "objectiveSection" },
+        a_summary_impressions: { label: "Summary & Clinical Impressions", suggestions: ["Client appears to be making [e.g., good, some, limited] progress towards therapeutic goals.", "Clinical impressions are consistent with [diagnosis/working hypothesis, e.g., GAD, MDD, Adjustment Disorder].", "Client responded [e.g., positively, with difficulty] to interventions.", "Symptoms of [condition] appear to be [e.g., improving, worsening, stable].", "Current presentation suggests [summary statement]."], sectionId: "assessmentSection" },
+        a_strengths_challenges: { label: "Strengths & Challenges", suggestions: ["Client's strengths include [e.g., motivation, insight, strong support system, resilience].", "Identified challenges include [e.g., negative self-talk, difficulty with emotional regulation, lack of resources].", "Barriers to progress may include [barrier1, barrier2].", "Protective factors noted: [factor1, factor2]."], sectionId: "assessmentSection" },
+        a_risk_level_justification: { label: "Risk Assessment", suggestions: ["Risk of harm to self assessed as [e.g., low, moderate, high] due to [justification].", "Risk of harm to others assessed as [e.g., low, moderate, high] due to [justification].", "No current indicators of acute risk.", "Protective factors such as [factor1, factor2] mitigate risk.", "Risk factors include [factor1, factor2].", "Safety plan remains appropriate / was updated."], sectionId: "assessmentSection" },
+        p_interventions_response: { label: "Interventions & Response", suggestions: ["Interventions utilized this session included [e.g., CBT, MI, psychoeducation, supportive listening, problem-solving].", "Client was receptive to [intervention] and [describe response, e.g., actively participated, appeared to understand].", "Practiced [skill, e.g., grounding techniques, communication skills].", "Explored [topic, e.g., cognitive distortions related to X].", "Provided validation and support for [client's experience]."], sectionId: "planSection" },
+        p_focus_homework: { label: "Next Session Focus & Homework", suggestions: ["Focus for next session will be to [e.g., review homework, explore X further, introduce Y skill].", "Homework assigned: [e.g., complete thought record, practice mindfulness daily, journal about X].", "Client agreed to [specific action before next session].", "No homework assigned this session."], sectionId: "planSection" },
+        p_safety_referrals_appt: { label: "Safety, Referrals & Next Appointment", suggestions: ["Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].", "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].", "Client to follow up with [specialist/service].", "Next appointment scheduled for [date] at [time].", "Continue weekly/bi-weekly sessions."], sectionId: "planSection" }
+    };
+
+    const formSections = [ // For managing visibility
+        { id: "generalInfoSection", label: "General Info" },
+        { id: "subjectiveSection", label: "Subjective (S)" },
+        { id: "objectiveSection", label: "Objective (O)" },
+        { id: "assessmentSection", label: "Assessment (A)" },
+        { id: "planSection", label: "Plan (P)" }
+    ];
+
+    function getCustomSuggestions() {
+        const suggestions = localStorage.getItem(CUSTOM_SUGGESTIONS_KEY);
+        return suggestions ? JSON.parse(suggestions) : {};
+    }
+
+    function saveCustomSuggestions(allSuggestions) {
+        localStorage.setItem(CUSTOM_SUGGESTIONS_KEY, JSON.stringify(allSuggestions));
+    }
+
+    function addCustomSuggestionForField(fieldId, suggestionText) {
+        const allSuggestions = getCustomSuggestions();
+        if (!allSuggestions[fieldId]) {
+            allSuggestions[fieldId] = [];
+        }
+        if (!allSuggestions[fieldId].includes(suggestionText)) { // Avoid duplicates
+            allSuggestions[fieldId].push(suggestionText);
+            saveCustomSuggestions(allSuggestions);
+            return true;
+        }
+        return false; // Suggestion already exists
+    }
+
+    function deleteCustomSuggestionForField(fieldId, suggestionText) {
+        const allSuggestions = getCustomSuggestions();
+        if (allSuggestions[fieldId]) {
+            allSuggestions[fieldId] = allSuggestions[fieldId].filter(s => s !== suggestionText);
+            if (allSuggestions[fieldId].length === 0) {
+                delete allSuggestions[fieldId];
+            }
+            saveCustomSuggestions(allSuggestions);
+        }
+    }
+    
+    addCustomSuggestionButton.addEventListener('click', () => {
+        if (!activeTextarea || !activeTextarea.id) {
+            showToast("No field selected to add suggestion for.", "error");
+            return;
+        }
+        const suggestionText = customSuggestionInput.value.trim();
+        if (!suggestionText) {
+            showToast("Suggestion text cannot be empty.", "info");
+            return;
+        }
+        if (addCustomSuggestionForField(activeTextarea.id, suggestionText)) {
+            showToast("Custom suggestion added!", "success");
+            customSuggestionInput.value = '';
+            updateHelperPanel(activeTextarea.id); // Refresh suggestions
+        } else {
+            showToast("This suggestion already exists for this field.", "info");
+        }
+    });
+
+
+    Object.keys(fieldData).forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+            element.addEventListener('focus', () => {
+                activeTextarea = element;
+                updateHelperPanel(fieldId);
+                customSuggestionModule.style.display = 'block';
+                addCustomSuggestionTitle.textContent = `Add for: ${fieldData[fieldId]?.label || 'Current Field'}`;
+            });
+        }
+    });
+    
+    clearActiveFieldButton.addEventListener('click', () => {
+        if (activeTextarea) {
+            activeTextarea.value = '';
+            showToast(`Field "${fieldData[activeTextarea.id]?.label || 'Current'}" cleared.`, 'info');
+            activeTextarea.focus();
+        } else {
+            showToast('No field is currently active.', 'info');
+        }
+    });
+
+    function updateHelperPanel(fieldId) {
+        const data = fieldData[fieldId];
+        if (!data) {
+            helperPanelTitle.textContent = "Suggestions";
+            helperPanelSubtitle.textContent = "For: (No field selected)";
+            suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions for this field.</p>';
+            customSuggestionModule.style.display = 'none';
+            return;
+        }
+
+        helperPanelTitle.textContent = "Suggestions";
+        helperPanelSubtitle.textContent = `For: ${data.label}`;
+        suggestionsContainer.innerHTML = ''; 
+
+        const allFieldSuggestions = getCustomSuggestions();
+        const customSuggestionsForField = allFieldSuggestions[fieldId] || [];
+
+        let hasSuggestions = false;
+
+        if (data.suggestions.length > 0) {
+            hasSuggestions = true;
+            data.suggestions.forEach(suggestionText => {
+                const btn = createSuggestionButton(suggestionText, false);
+                suggestionsContainer.appendChild(btn);
+            });
+        }
+
+        if (customSuggestionsForField.length > 0) {
+            hasSuggestions = true;
+            customSuggestionsForField.forEach(suggestionText => {
+                const btn = createSuggestionButton(suggestionText, true, fieldId);
+                suggestionsContainer.appendChild(btn);
+            });
+        }
+
+        if (!hasSuggestions) {
+            suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">No suggestions yet. Add your own below!</p>';
+        }
+    }
+
+    function createSuggestionButton(text, isCustom, fieldIdForDelete = null) {
+        const btn = document.createElement('button');
+        btn.className = 'suggestion-btn' + (isCustom ? ' suggestion-btn-custom' : '');
+        
+        const textSpan = document.createElement('span');
+        textSpan.textContent = text;
+        textSpan.style.flexGrow = "1"; // Make text take available space
+        btn.appendChild(textSpan);
+
+        if (isCustom && fieldIdForDelete) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerHTML = '&times;'; // A simple "x"
+            deleteBtn.className = 'delete-suggestion-btn';
+            deleteBtn.title = 'Delete this custom suggestion';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); // Prevent inserting suggestion when deleting
+                if (confirm(`Delete suggestion: "${text}"?`)) {
+                    deleteCustomSuggestionForField(fieldIdForDelete, text);
+                    updateHelperPanel(fieldIdForDelete); // Refresh panel
+                    showToast("Custom suggestion deleted.", "info");
+                }
+            };
+            btn.appendChild(deleteBtn);
+        }
+        
+        btn.addEventListener('click', () => insertSuggestion(text));
+        return btn;
+    }
+
+
+    function insertSuggestion(text) {
+        if (!activeTextarea) return;
+        const currentVal = activeTextarea.value;
+        const cursorPos = activeTextarea.selectionStart;
+        let prefix = "";
+        if (cursorPos > 0 && !/[\s\n]$/.test(currentVal.substring(0, cursorPos))) {
+            prefix = " ";
+        } else if (currentVal.length > 0 && !currentVal.endsWith('\n') && !currentVal.endsWith('\n\n') && !text.startsWith('- ')) {
+            if (!currentVal.endsWith('\n')) prefix = "\n";
+        }
+        const textToInsert = prefix + text;
+        activeTextarea.value = currentVal.substring(0, cursorPos) + textToInsert + currentVal.substring(activeTextarea.selectionEnd);
+        activeTextarea.focus();
+        activeTextarea.selectionStart = activeTextarea.selectionEnd = cursorPos + textToInsert.length;
+    }
+
+    compileCopyButton.addEventListener('click', () => {
+        let compiledNote = "";
+        const uiSettings = loadUISettings();
+        const fieldOrder = [ 
+            { id: 'gi_date', label: 'Date', sectionId: "generalInfoSection" },
+            { id: 'gi_client_id', label: 'Client ID', sectionId: "generalInfoSection" },
+            { id: 'gi_session_focus', label: 'Session Focus', sectionId: "generalInfoSection", sectionBreak: true },
+
+            { section: 'S (Subjective)', sectionId: "subjectiveSection" },
+            { id: 's_main_concerns', label: "Client's Main Concerns", sectionId: "subjectiveSection" },
+            { id: 's_mood_symptoms', label: "Reported Mood & Symptoms", sectionId: "subjectiveSection" },
+            { id: 's_risk', label: "Suicidal/Homicidal Ideation (Report)" , sectionId: "subjectiveSection", sectionBreak: true},
+
+            { section: 'O (Objective)', sectionId: "objectiveSection" },
+            { id: 'o_presentation', label: "Appearance & Behavior", sectionId: "objectiveSection" },
+            { id: 'o_affect_mood_speech', label: "Observed Affect, Mood & Speech", sectionId: "objectiveSection" },
+            { id: 'o_thought_orientation', label: "Thought Process & Orientation", sectionId: "objectiveSection", sectionBreak: true },
+
+            { section: 'A (Assessment)', sectionId: "assessmentSection" },
+            { id: 'a_summary_impressions', label: "Summary & Clinical Impressions", sectionId: "assessmentSection" },
+            { id: 'a_strengths_challenges', label: "Strengths & Challenges", sectionId: "assessmentSection" },
+            { id: 'a_risk_level_justification', label: "Risk Assessment", sectionId: "assessmentSection", sectionBreak: true },
+
+            { section: 'P (Plan)', sectionId: "planSection" },
+            { id: 'p_interventions_response', label: "Interventions & Response", sectionId: "planSection" },
+            { id: 'p_focus_homework', label: "Next Session Focus & Homework", sectionId: "planSection" },
+            { id: 'p_safety_referrals_appt', label: "Safety, Referrals & Next Appointment", sectionId: "planSection" }
+        ];
+        
+        let currentSectionHeader = "";
+        fieldOrder.forEach(item => {
+            // Skip item if its section is not visible (unless it's a section header itself)
+            if (item.sectionId && uiSettings.sectionsVisible && uiSettings.sectionsVisible[item.sectionId] === false) {
+                 return;
+            }
+
+            if (item.section) {
+                // Only add section header if it's different from the last one and it's visible
+                if (currentSectionHeader !== item.section && (uiSettings.sectionsVisible[item.sectionId] !== false) ) {
+                    if (compiledNote.length > 0 && !compiledNote.endsWith("\n\n")) compiledNote += "\n";
+                    compiledNote += `${item.section}:\n`;
+                    currentSectionHeader = item.section;
+                }
+            } else {
+                const element = document.getElementById(item.id);
+                const value = element ? element.value.trim() : '';
+                if (value) {
+                    if (item.label.includes("Date") || item.label.includes("Client ID") || item.label.includes("Session Focus")) {
+                         compiledNote += `${item.label}: ${value}\n`;
+                    } else {
+                         compiledNote += `- ${item.label}: ${value}\n`;
+                    }
+                }
+                if (item.sectionBreak && compiledNote.length > 0 && !compiledNote.endsWith("\n\n") && !compiledNote.endsWith(":\n")) {
+                     compiledNote += "\n";
+                }
+            }
+        });
+
+        if (compiledNote.trim() === "") {
+            showToast("Note is empty or all visible sections are empty. Nothing to copy.", "error");
+            return;
+        }
+        navigator.clipboard.writeText(compiledNote.trim())
+            .then(() => showToast("Formatted note copied to clipboard!"))
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+                showToast("Failed to copy. Please try manual copy.", "error");
+            });
+    });
+
+    function getFormData() {
+        const data = {};
+        Object.keys(fieldData).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) data[id] = element.value;
+        });
+        return data;
+    }
+
+    function setFormData(data) {
+        Object.keys(data).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.value = data[id] || '';
+        });
+    }
+
+    saveDraftButton.addEventListener('click', () => {
+        try {
+            const dataToSave = getFormData();
+            if (Object.values(dataToSave).every(val => val.trim() === "")) {
+                 showToast("Nothing to save. Form is empty.", "info");
+                 return;
+            }
+            localStorage.setItem('therapistSOAPNoteDraft', JSON.stringify(dataToSave));
+            showToast("Draft saved locally!");
+        } catch (e) {
+            console.error("Error saving to local storage:", e);
+            showToast("Could not save draft. Storage might be full/disabled.", "error");
+        }
+    });
+
+    loadDraftButton.addEventListener('click', () => {
+        const currentData = getFormData();
+        if (Object.values(currentData).some(val => val.trim() !== "") && !confirm("Loading a draft will overwrite current content. Continue?")) {
+             return;
+        }
+        try {
+            const savedData = localStorage.getItem('therapistSOAPNoteDraft');
+            if (savedData) {
+                setFormData(JSON.parse(savedData));
+                showToast("Draft loaded from local storage!");
+            } else {
+                showToast("No saved draft found.", "info");
+            }
+        } catch (e) {
+            console.error("Error loading from local storage:", e);
+            showToast("Could not load draft. Data might be corrupted.", "error");
+        }
+    });
+    
+    const clearTheForm = () => {
+        form.reset(); 
+        Object.keys(fieldData).forEach(id => {
+            const element = document.getElementById(id);
+            if (element && element.tagName === 'TEXTAREA') element.value = '';
+        });
+        helperPanelTitle.textContent = "Suggestions";
+        helperPanelSubtitle.textContent = "For: (No field selected)";
+        suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field in the form to see relevant suggestions here.</p>';
+        customSuggestionModule.style.display = 'none';
+        activeTextarea = null;
+        if (document.getElementById('gi_date')) document.getElementById('gi_date').focus();
+    };
+
+    clearFormButton.addEventListener('click', () => {
+        if (confirm("Are you sure you want to clear the entire form? This cannot be undone.")) {
+            clearTheForm();
+            showToast("Form cleared.");
+        }
+    });
+    
+    resetNoteButton.addEventListener('click', () => {
+         if (confirm("Are you sure you want to start a new note? This will clear the entire form.")) {
+            clearTheForm();
+            showToast("New note started. Form cleared.");
+        }
+    });
+
+    let toastTimeout;
+    function showToast(message, type = 'success') {
+        clearTimeout(toastTimeout);
+        toastMessage.textContent = message;
+        toastMessage.className = 'show'; 
+        if (type === 'error') toastMessage.style.backgroundColor = '#dc2626'; // red-600
+        else if (type === 'info') toastMessage.style.backgroundColor = '#2563eb'; // blue-600
+        else toastMessage.style.backgroundColor = '#16a34a'; // green-600
+        toastTimeout = setTimeout(() => {
+            toastMessage.className = toastMessage.className.replace('show', '');
+        }, 3000);
+    }
+    
+    // --- UI Settings (Density & Section Visibility) ---
+    function loadUISettings() {
+        const settings = localStorage.getItem(UI_SETTINGS_KEY);
+        const defaults = {
+            layout: 'normal',
+            sectionsVisible: {
+                generalInfoSection: true,
+                subjectiveSection: true,
+                objectiveSection: true,
+                assessmentSection: true,
+                planSection: true
+            }
+        };
+        if (settings) {
+            const loaded = JSON.parse(settings);
+            // Ensure all sections have a visibility setting, even if new ones are added later
+            Object.keys(defaults.sectionsVisible).forEach(key => {
+                if (loaded.sectionsVisible && typeof loaded.sectionsVisible[key] === 'undefined') {
+                    loaded.sectionsVisible[key] = defaults.sectionsVisible[key];
+                }
+            });
+             if(!loaded.sectionsVisible) loaded.sectionsVisible = defaults.sectionsVisible; // if sectionVisible is missing entirely
+            return { ...defaults, ...loaded };
+        }
+        return defaults;
+    }
+
+    function saveUISetting(key, value) {
+        const settings = loadUISettings();
+        settings[key] = value;
+        localStorage.setItem(UI_SETTINGS_KEY, JSON.stringify(settings));
+    }
+    
+    function applyUISettings() {
+        const settings = loadUISettings();
+        // Apply layout
+        document.body.classList.remove('layout-compact', 'layout-normal', 'layout-expanded');
+        document.body.classList.add(`layout-${settings.layout || 'normal'}`);
+        document.querySelectorAll('.btn-density').forEach(btn => {
+            btn.classList.remove('active', 'bg-sky-600', 'text-white'); // remove active style
+             btn.classList.add('btn-secondary'); // ensure base style
+            if (btn.dataset.density === (settings.layout || 'normal')) {
+                btn.classList.add('active', 'bg-sky-600', 'text-white');
+                 btn.classList.remove('btn-secondary');
+            }
+        });
+
+        // Apply section visibility
+        Object.entries(settings.sectionsVisible).forEach(([sectionId, isVisible]) => {
+            const sectionElement = document.getElementById(sectionId);
+            const checkbox = document.querySelector(`#visibleSectionsControlsContainer input[data-section-id="${sectionId}"]`);
+            if (sectionElement) {
+                sectionElement.classList.toggle('hidden-section', !isVisible);
+            }
+            if (checkbox) checkbox.checked = isVisible;
+        });
+    }
+
+    function initUISettingsControls() {
+        // Density buttons
+        document.querySelectorAll('.btn-density').forEach(button => {
+            button.addEventListener('click', () => {
+                const newDensity = button.dataset.density;
+                saveUISetting('layout', newDensity);
+                applyUISettings();
+            });
+        });
+
+        // Section visibility checkboxes
+        const visibleSectionsControlsContainer = document.getElementById('visibleSectionsControlsContainer');
+        formSections.forEach(section => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `toggle-${section.id}`;
+            checkbox.dataset.sectionId = section.id;
+            checkbox.className = 'mr-2 h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500';
+            
+            const label = document.createElement('label');
+            label.htmlFor = `toggle-${section.id}`;
+            label.textContent = section.label;
+            label.className = 'text-sm text-slate-700';
+
+            div.appendChild(checkbox);
+            div.appendChild(label);
+            visibleSectionsControlsContainer.appendChild(div);
+
+            checkbox.addEventListener('change', (e) => {
+                const currentSettings = loadUISettings();
+                currentSettings.sectionsVisible[section.id] = e.target.checked;
+                saveUISetting('sectionsVisible', currentSettings.sectionsVisible);
+                applyUISettings(); // Re-apply to show/hide section immediately
+            });
+        });
+    }
+
+    // Initial Load
+    initUISettingsControls();
+    applyUISettings(); 
+    const firstInput = document.getElementById('gi_date');
+    if (firstInput) firstInput.focus();
+    
+    // If no field is focused initially, hide the custom suggestion module
+    if (!activeTextarea) {
+        customSuggestionModule.style.display = 'none';
+        helperPanelSubtitle.textContent = "For: (No field selected)";
+    }
+});
+</script>
