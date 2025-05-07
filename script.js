@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadDraftButton = document.getElementById('loadDraftButton');
     const clearFormButton = document.getElementById('clearFormButton');
     const resetNoteButton = document.getElementById('resetNoteButton');
+    // clearActiveFieldButton REMOVED
     const toastMessage = document.getElementById('toast-message');
     const newSectionNameInput = document.getElementById('newSectionNameInput');
     const addNewSectionButton = document.getElementById('addNewSectionButton');
@@ -33,10 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State & Keys ---
     let activeTextarea = null;
     let toastTimeout; 
-    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v9';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v9';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v9';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v9';
+    const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v10'; // Version bump
+    const UI_SETTINGS_KEY = 'noteinghamUISettings_v10';
+    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v10';
+    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v10';
     let masterFieldData = {}; 
     let masterSectionData = [];
 
@@ -122,13 +123,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    function renderForm() { /* ... Full code - REMOVED adding .form-input class here ... */ 
+    function renderForm() { 
         if (!soapNoteForm) { console.error("soapNoteForm not found!"); return; }
         soapNoteForm.innerHTML = ''; 
         masterSectionData.forEach(sectionMeta => {
             const sectionElement = document.createElement('section');
-            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section'; // Base class
-            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section'); // Add custom marker if needed
+            sectionElement.id = sectionMeta.id; sectionElement.className = 'form-section'; 
+            if (sectionMeta.isCustom) sectionElement.classList.add('custom-section'); 
             sectionElement.setAttribute('aria-labelledby', `${sectionMeta.id}-header`);
             const h3 = document.createElement('h3');
             h3.id = `${sectionMeta.id}-header`; h3.textContent = sectionMeta.title;
@@ -153,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     currentGridDiv.appendChild(formFieldDiv); fieldCountInGrid++; addedToGrid = true;
                 } else {
-                    const isFirstNonH3Element = sectionElement.children.length <= 2;
+                    const isFirstNonH3Element = sectionElement.children.length <= (sectionMeta.isCustom ? 2 : 1); // Account for delete button if custom
                      if (!isFirstNonH3Element) formFieldDiv.classList.add('mt-4');
                     sectionElement.appendChild(formFieldDiv);
                 }
@@ -163,7 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (field.type === 'textarea') inputEl = document.createElement('textarea');
                 else { inputEl = document.createElement('input'); inputEl.type = 'text'; }
                 inputEl.id = fieldId; inputEl.name = fieldId; inputEl.placeholder = field.placeholder;
-                // Do NOT add .form-input here; rely on CSS targeting .form-field textarea, .form-field input
+                // Add the base class for styling via CSS
+                inputEl.classList.add('form-input-base'); 
                 formFieldDiv.appendChild(inputEl);
                 inputEl.addEventListener('focus', () => {
                     activeTextarea = inputEl; updateHelperPanel(fieldId);
@@ -242,15 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
         tabButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault(); 
-                // Deactivate all
-                tabButtons.forEach(btn => {
-                    btn.classList.remove(...activeClasses);
-                    btn.classList.add(...inactiveClasses);
-                });
+                tabButtons.forEach(btn => { btn.classList.remove(...activeClasses); btn.classList.add(...inactiveClasses); });
                 tabContents.forEach(content => content.classList.remove('active'));
-                // Activate clicked
-                button.classList.add(...activeClasses);
-                button.classList.remove(...inactiveClasses);
+                button.classList.add(...activeClasses); button.classList.remove(...inactiveClasses);
                 const targetContentId = button.dataset.tabTarget;
                 const targetContentElement = document.getElementById(targetContentId);
                 if (targetContentElement) targetContentElement.classList.add('active');
@@ -259,20 +255,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
          let activeTabFound = false;
          tabButtons.forEach(button => {
+             // Use the classList from HTML to determine initial state
              if(button.classList.contains('active-tab')) {
                  const targetContentElement = document.getElementById(button.dataset.tabTarget);
                  if (targetContentElement) targetContentElement.classList.add('active');
                  activeTabFound = true;
-                 // Ensure inactive classes are removed if active is set initially in HTML
-                 button.classList.remove(...inactiveClasses);
+                 button.classList.remove(...inactiveClasses); // Ensure inactive classes are off
              } else {
-                  // Ensure inactive classes are present if not active initially
-                  button.classList.add(...inactiveClasses);
+                  button.classList.add(...inactiveClasses); // Ensure inactive classes are on
                   button.classList.remove(...activeClasses);
              }
          });
+         // Fallback if HTML didn't specify an active tab
          if(!activeTabFound && suggestionsHelperTabButton) {
-             // Default to suggestions tab if none were active
              suggestionsHelperTabButton.classList.add(...activeClasses);
              suggestionsHelperTabButton.classList.remove(...inactiveClasses);
              if(suggestionsHelperTabContent) suggestionsHelperTabContent.classList.add('active');
@@ -466,8 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
         if(suggestionsContainer) suggestionsContainer.innerHTML = '<p class="text-slate-500 text-sm">Click on a field...</p>';
         if(customSuggestionModule) customSuggestionModule.style.display = 'none'; activeTextarea = null;
-        // const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
-        // Remove auto-focus on clear
     };
     if (clearFormButton) { /* ... Full code ... */ 
         clearFormButton.addEventListener('click', () => { if (confirm("Clear entire form?")) { clearTheForm(); showToast("Form cleared."); } });
