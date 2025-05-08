@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400&display=swap" rel="stylesheet">
     <style>
-        /* Base styles & Utilities */
+        /* Base Styles from input_file_0.html (with minor tweaks) */
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overscroll-behavior-y: none; }
-        .main-content-area { height: calc(100vh - 128px - 50px); /* Header - Footer - TopControlsBar approx height */ }
+        .main-content-area { height: calc(100vh - 128px - 50px); } /* Header - Footer - TopControlsBar approx height */
         .top-controls-bar { background-color: white; padding: 0.5rem 1rem; margin-bottom:1rem; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
         .app-title {font-family: 'Merriweather', serif; font-weight: 400;}
 
@@ -22,22 +22,16 @@
         .delete-section-btn:hover { color: #dc2626; }
         
         .form-field label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: #334155; transition: font-size 0.3s ease; }
+        /* Original Input Styling from input_file_0.html */
+        .form-field input[type="text"], .form-field textarea { 
+            @apply w-full border border-slate-300 rounded-md shadow-sm text-sm 
+                   focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
+                   disabled:opacity-50 disabled:cursor-not-allowed p-2; /* Use @apply for base */
+        }
+        .form-field textarea { @apply min-h-[100px] resize-vertical py-2 px-3; }
+        .form-field input[type="text"] { @apply py-2 px-3; }
         
-        /* Base Input/Textarea/Select styles using @apply */
-         .form-input-base {
-             @apply block w-full border border-slate-300 rounded-md shadow-sm text-sm 
-                    focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
-                    disabled:opacity-50 disabled:cursor-not-allowed p-2; /* Base padding for normal density */
-         }
-        textarea.form-input-base { @apply min-h-[100px] resize-vertical py-2 px-3; }
-        input[type="text"].form-input-base { @apply py-2 px-3; }
-
-        .form-select { 
-             @apply block w-full border border-slate-300 rounded-md p-2 text-sm 
-                    focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
-                    shadow-sm disabled:opacity-50 disabled:cursor-not-allowed; 
-        } 
-        
+        /* Helper Panel Base */
         .helper-panel { background-color: white; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
         
         .suggestion-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 0.625rem 1rem; font-size: 0.875rem; color: #334155; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.375rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; }
@@ -55,18 +49,18 @@
         .scrollable-panel::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px;}
         .scrollable-panel::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        /* Density specific styles - Overriding base padding/min-height */
+        /* Density specific styles targeting original selectors */
         .layout-compact .form-section { padding: 1rem; margin-bottom: 1rem; }
         .layout-compact .form-section h3 { font-size: 1.1rem; margin-bottom: 0.75rem; padding-bottom: 0.3rem; }
         .layout-compact .form-field label { font-size: 0.8rem; margin-bottom: 0.25rem; }
-        .layout-compact .form-input-base { padding: 0.5rem; font-size: 0.8rem; } 
-        .layout-compact textarea.form-input-base { min-height: 60px; }
+        .layout-compact .form-field input[type="text"], .layout-compact .form-field textarea { padding: 0.5rem; font-size: 0.8rem; } 
+        .layout-compact .form-field textarea { min-height: 60px; }
         
         .layout-expanded .form-section { padding: 2rem; margin-bottom: 2rem; }
         .layout-expanded .form-section h3 { font-size: 1.4rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; }
         .layout-expanded .form-field label { font-size: 1rem; margin-bottom: 0.75rem; }
-        .layout-expanded .form-input-base { padding: 1rem; font-size: 0.95rem; } 
-        .layout-expanded textarea.form-input-base { min-height: 150px; }
+        .layout-expanded .form-field input[type="text"], .layout-expanded .form-field textarea { padding: 1rem; font-size: 0.95rem; } 
+        .layout-expanded .form-field textarea { min-height: 150px; }
         
         .hidden-section { display: none !important; }
         
@@ -82,6 +76,13 @@
         /* Tab Content Visibility */
         .tab-content { display: none; } 
         .tab-content.active { display: block; } 
+
+        /* Select specific style */
+         .form-select { 
+              @apply block w-full border border-slate-300 rounded-md p-2 text-sm 
+                     focus:border-sky-500 focus:ring-1 focus:ring-sky-500 
+                     shadow-sm disabled:opacity-50 disabled:cursor-not-allowed; 
+         } 
         
         /* Visible Sections Popover */
         #visibleSectionsPopover { display: none; position: absolute; background-color: white; border: 1px solid #e2e8f0; border-radius: 0.375rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); padding: 1rem; z-index: 50; min-width: 200px; right:0; margin-top: 0.25rem;}
@@ -89,7 +90,7 @@
 
     </style>
 </head>
-<body class="flex flex-col h-screen">
+<body class="flex flex-col h-screen"> {/* Density classes added here */}
 
     <header class="bg-sky-700 text-white p-4 shadow-lg flex-shrink-0">
         <div class="container mx-auto flex justify-between items-center">
@@ -105,7 +106,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-2">
                  <label for="templateSelector" class="text-sm font-medium text-slate-700">Template:</label>
-                 <select id="templateSelector" class="form-select text-sm py-1 px-2 w-auto max-w-xs"> {/* Added max-w-xs */}
+                 <select id="templateSelector" class="form-select text-sm py-1 px-2 w-auto max-w-xs">
                      {/* Options populated by JS */}
                  </select>
             </div>
@@ -135,7 +136,7 @@
                 </form>
             </div>
 
-             <!-- Helper Panel Column - Corrected Flex structure -->
+             {/* Helper Panel Column - Flex structure for internal scrolling */}
             <aside class="md:col-span-1 h-full flex flex-col helper-panel"> 
                 
                 <div class="p-4 border-b border-slate-200 flex-shrink-0"> 
