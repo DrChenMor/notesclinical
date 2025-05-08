@@ -135,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const customSuggestionInput = document.getElementById('customSuggestionInput');
     const addCustomSuggestionButton = document.getElementById('addCustomSuggestionButton');
     const downloadNoteButton = document.getElementById('downloadNoteButton');
+  const copyNoteButton = document.getElementById('copyNoteButton');
+
     const downloadDraftButton = document.getElementById('downloadDraftButton');
     const uploadDraftButton = document.getElementById('uploadDraftButton');
     const uploadDraftInput = document.getElementById('uploadDraftInput');
@@ -444,6 +446,78 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Note downloaded!", "success");
         });
     }
+    if (copyNoteButton) {
+  copyNoteButton.addEventListener('click', () => {
+    // duplicate exactly the same HTML you build for .doc download
+    let htmlNote = `<html><head><meta charset="UTF-8">
+      <title>Note - ${allTemplates[currentTemplateId]?.name || 'Untitled'}</title>
+      <style>body{font-family:Arial,sans-serif;} h3{margin-top:1em;margin-bottom:0.5em;} p{margin:0.2em 0;}</style>
+    </head><body>`;
+    htmlNote += `<h1>${allTemplates[currentTemplateId]?.name || 'Note'}</h1><hr>`;
+    const uiSettings = loadUISettings();
+    let contentAdded = false;
+    masterSectionData.forEach(sectionMeta => {
+      if (uiSettings.sectionsVisible?.[sectionMeta.id] === false) return;
+      let sectionContent = `<h3><strong>${sectionMeta.title}:</strong></h3>`;
+      let fieldsAdded = false;
+      sectionMeta.fieldIds.forEach(fieldId => {
+        const field = masterFieldData[fieldId];
+        const el = document.getElementById(fieldId);
+        const val = el ? el.value.trim().replace(/\n/g, '<br>') : '';
+        if (val) {
+          fieldsAdded = true;
+          contentAdded = true;
+          sectionContent += `<p><strong>${field.label}:</strong> ${val}</p>`;
+        }
+      });
+      if (fieldsAdded) htmlNote += sectionContent + "<br>";
+    });
+    htmlNote += "</body></html>";
+    if (!contentAdded) {
+      showToast("Note is empty.", "error");
+      return;
+    }
+
+    // Attempt modern clipboard API first
+    if (navigator.clipboard && navigator.clipboard.write) {
+      const blob = new Blob([htmlNote], { type: 'text/html' });
+      const item = new ClipboardItem({ 'text/html': blob });
+      navigator.clipboard.write([item])
+        .then(() => showToast("Note copied to clipboard!", "success"))
+        .catch(err => {
+          console.error("Clipboard write failed", err);
+          showToast("Copy failed. Please try again.", "error");
+        });
+    } else {
+      // Fallback for older browsers
+      const temp = document.createElement('div');
+      temp.innerHTML = htmlNote;
+      temp.contentEditable = 'true';
+      temp.style.position = 'fixed';
+      temp.style.pointerEvents = 'none';
+      temp.style.opacity = '0';
+      document.body.appendChild(temp);
+
+      const range = document.createRange();
+      range.selectNodeContents(temp);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      try {
+        document.execCommand('copy');
+        showToast("Note copied to clipboard!", "success");
+      } catch (err) {
+        console.error("execCommand copy failed", err);
+        showToast("Copy failed. Please try again.", "error");
+      }
+
+      sel.removeAllRanges();
+      document.body.removeChild(temp);
+    }
+  });
+}
+
     if (downloadDraftButton) { /* ... Full code ... */ 
         downloadDraftButton.addEventListener('click', () => {
             const dataToSave = { templateId: currentTemplateId, formData: getFormData() };
