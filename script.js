@@ -23,76 +23,184 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetSectionSelect = document.getElementById('targetSectionSelect');
     const newFieldNameInput = document.getElementById('newFieldNameInput');
     const addNewFieldButton = document.getElementById('addNewFieldButton');
-    
     const toggleVisibleSectionsButton = document.getElementById('toggleVisibleSectionsButton');
     const visibleSectionsPopover = document.getElementById('visibleSectionsPopover');
     const visibleSectionsControlsContainer = document.getElementById('visibleSectionsControlsContainer');
-
     const suggestionsHelperTabButton = document.getElementById('suggestionsHelperTabButton');
     const templateEditorHelperTabButton = document.getElementById('templateEditorHelperTabButton');
     const suggestionsHelperTabContent = document.getElementById('suggestionsHelperTabContent');
     const templateEditorHelperTabContent = document.getElementById('templateEditorHelperTabContent');
-
     const professionSelect = document.getElementById('professionSelect');
-    professionSelect.addEventListener('change', () => {
-      // 1) swap in the chosen template (falls back to therapist)
-      standardSections = professionTemplates[professionSelect.value] || professionTemplates.therapist;
-      // 2) rebuild & rerender the form
-      buildMasterData();
-      renderForm();
-      setupHelperPanelTabs();   // re-attach tab logic if needed
-      initDensityControls();    // re-apply UI settings
-    });
+    const copyNoteButton = document.getElementById('copyNoteButton');
 
     // --- State & Keys ---
     let activeTextarea = null;
-    let toastTimeout; 
+    let toastTimeout;
 
     const CUSTOM_SUGGESTIONS_KEY = 'noteinghamCustomSuggestions_v6';
-    const UI_SETTINGS_KEY = 'noteinghamUISettings_v6';
-    const LOCAL_DRAFT_KEY = 'noteinghamSOAPNoteDraft_v6';
-    const CUSTOM_TEMPLATE_KEY = 'noteinghamCustomTemplate_v6';
+    const UI_SETTINGS_KEY          = 'noteinghamUISettings_v6';
+    const LOCAL_DRAFT_KEY          = 'noteinghamSOAPNoteDraft_v6';
+    const CUSTOM_TEMPLATE_KEY      = 'noteinghamCustomTemplate_v6';
 
-    let masterFieldData = {}; 
+    let masterFieldData = {};
     let masterSectionData = [];
 
-    let standardSections = [ /* ... Full standardSections array as previously provided ... */ 
+    // --- 1) Make your SOAP template reassignable ---
+    let standardSections = [
         { id: 'generalInfoSection', title: 'General Information', fields: [
-            { id: 'gi_date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD', suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "] },
-            { id: 'gi_client_id', label: 'Client ID / Name', type: 'text', placeholder: 'e.g., 12345 or Initials', suggestions: ["Client ID: ", "Client Initials: "] },
-            { id: 'gi_session_focus', label: 'Session Focus / Main Topic', type: 'textarea', placeholder: 'e.g., Review of coping strategies for anxiety', suggestions: ["Session focused on reviewing coping strategies for [issue].", "Exploration of [topic, e.g., recent stressors].", "Follow-up on [previous topic/homework].", "Psychoeducation regarding [condition/skill].", "Goal setting for [area]."] }
+            { id: 'gi_date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD',
+              suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "] },
+            { id: 'gi_client_id', label: 'Client ID / Name', type: 'text', placeholder: 'e.g., 12345 or Initials',
+              suggestions: ["Client ID: ", "Client Initials: "] },
+            { id: 'gi_session_focus', label: 'Session Focus / Main Topic', type: 'textarea',
+              placeholder: 'e.g., Review of coping strategies for anxiety',
+              suggestions: [
+                "Session focused on reviewing coping strategies for [issue].",
+                "Exploration of [topic, e.g., recent stressors].",
+                "Follow-up on [previous topic/homework].",
+                "Psychoeducation regarding [condition/skill].",
+                "Goal setting for [area]."
+              ]
+            }
         ]},
         { id: 'subjectiveSection', title: 'S (Subjective)', fields: [
-            { id: 's_main_concerns', label: "Client's Main Concerns, Statements, Presenting Issues", type: 'textarea', placeholder: "Client states, '...' or primary issues reported", suggestions: ["Client states, \"[Quote client's words here]\".", "Client reported primary concerns regarding [topic1] and [topic2].", "The main issue discussed was [issue].", "Client expressed distress about [situation].", "Client presented with concerns about [symptom/problem]."] },
-            { id: 's_mood_symptoms', label: "Reported Mood, Symptoms (sleep, appetite), Stress Levels", type: 'textarea', placeholder: "e.g., Mood: Anxious. Sleep: Poor. Stress: High.", suggestions: ["Client reported mood as [e.g., anxious, depressed, stable, fair, 7/10].", "Sleep reported as [e.g., poor, adequate, 6 hours, restless].", "Appetite reported as [e.g., good, decreased, increased].", "Energy levels described as [e.g., low, moderate, good].", "Reported experiencing [symptom, e.g., headaches, irritability, lack of motivation].", "Stress level reported as [e.g., high, manageable, X/10]."] },
-            { id: 's_risk', label: "Suicidal/Homicidal Ideation (Client Report)", type: 'textarea', placeholder: "e.g., Denied SI/HI. Reported fleeting thoughts of...", suggestions: ["Client denied any suicidal or homicidal ideation, intent, or plan.", "Client reported fleeting thoughts of [suicide/self-harm] but denied intent or plan.", "No SI/HI reported by client.", "Client was directly asked about SI/HI and denied.", "Safety plan discussed in relation to reported thoughts."] }
+            { id: 's_main_concerns', label: "Client's Main Concerns, Statements, Presenting Issues", type: 'textarea',
+              placeholder: "Client states, '...' or primary issues reported",
+              suggestions: [
+                "Client states, \"[Quote client's words here]\".",
+                "Client reported primary concerns regarding [topic1] and [topic2].",
+                "The main issue discussed was [issue].",
+                "Client expressed distress about [situation].",
+                "Client presented with concerns about [symptom/problem]."
+              ]
+            },
+            { id: 's_mood_symptoms', label: "Reported Mood, Symptoms (sleep, appetite), Stress Levels", type: 'textarea',
+              placeholder: "e.g., Mood: Anxious. Sleep: Poor. Stress: High.",
+              suggestions: [
+                "Client reported mood as [e.g., anxious, depressed, stable, fair, 7/10].",
+                "Sleep reported as [e.g., poor, adequate, 6 hours, restless].",
+                "Appetite reported as [e.g., good, decreased, increased].",
+                "Energy levels described as [e.g., low, moderate, good].",
+                "Reported experiencing [symptom, e.g., headaches, irritability, lack of motivation].",
+                "Stress level reported as [e.g., high, manageable, X/10]."
+              ]
+            },
+            { id: 's_risk', label: "Suicidal/Homicidal Ideation (Client Report)", type: 'textarea',
+              placeholder: "e.g., Denied SI/HI. Reported fleeting thoughts of...",
+              suggestions: [
+                "Client denied any suicidal or homicidal ideation, intent, or plan.",
+                "Client reported fleeting thoughts of [suicide/self-harm] but denied intent or plan.",
+                "No SI/HI reported by client.",
+                "Client was directly asked about SI/HI and denied.",
+                "Safety plan discussed in relation to reported thoughts."
+              ]
+            }
         ]},
         { id: 'objectiveSection', title: 'O (Objective)', fields: [
-            { id: 'o_presentation', label: "Appearance, Behavior, Attitude, Motor Activity, Eye Contact", type: 'textarea', placeholder: "e.g., Well-groomed, cooperative, restless, good eye contact", suggestions: ["Client presented as [e.g., well-groomed, casually dressed, disheveled].", "Behavior was [e.g., cooperative, restless, withdrawn, engaged].", "Attitude towards therapist was [e.g., open, guarded, friendly].", "Motor activity was [e.g., within normal limits, agitated, slowed].", "Eye contact was [e.g., good, fair, poor, fleeting]."] },
-            { id: 'o_affect_mood_speech', label: "Observed Affect, Mood, Speech Characteristics", type: 'textarea', placeholder: "e.g., Affect: Congruent. Mood: Euthymic. Speech: Normal rate.", suggestions: ["Affect observed as [e.g., congruent with mood, constricted, flat, labile, broad].", "Observed mood appeared [e.g., euthymic, anxious, dysphoric, irritable].", "Speech was [e.g., clear and coherent, pressured, slow, soft, loud, normal rate and rhythm].", "Vocal tone was [e.g., monotonous, expressive]."] },
-            { id: 'o_thought_orientation', label: "Thought Process/Content, Orientation", type: 'textarea', placeholder: "e.g., Thought process: Logical. Oriented x4.", suggestions: ["Thought process appeared [e.g., logical, coherent, tangential, circumstantial, disorganized].", "Thought content revealed [e.g., no evidence of delusions or hallucinations, preoccupation with X].", "Client was alert and oriented to [person, place, time, situation - specify, e.g., x3, x4].", "Cognitive functioning appeared [e.g., intact, impaired in X area].", "Insight judged to be [e.g., good, fair, poor, limited].", "Judgment appeared [e.g., good, fair, impaired]."] }
+            { id: 'o_presentation', label: "Appearance, Behavior, Attitude, Motor Activity, Eye Contact", type: 'textarea',
+              placeholder: "e.g., Well-groomed, cooperative, restless, good eye contact",
+              suggestions: [
+                "Client presented as [e.g., well-groomed, casually dressed, disheveled].",
+                "Behavior was [e.g., cooperative, restless, withdrawn, engaged].",
+                "Attitude towards therapist was [e.g., open, guarded, friendly].",
+                "Motor activity was [e.g., within normal limits, agitated, slowed].",
+                "Eye contact was [e.g., good, fair, poor, fleeting]."
+              ]
+            },
+            { id: 'o_affect_mood_speech', label: "Observed Affect, Mood, Speech Characteristics", type: 'textarea',
+              placeholder: "e.g., Affect: Congruent. Mood: Euthymic. Speech: Normal rate.",
+              suggestions: [
+                "Affect observed as [e.g., congruent with mood, constricted, flat, labile, broad].",
+                "Observed mood appeared [e.g., euthymic, anxious, dysphoric, irritable].",
+                "Speech was [e.g., clear and coherent, pressured, slow, soft, loud, normal rate and rhythm].",
+                "Vocal tone was [e.g., monotonous, expressive]."
+              ]
+            },
+            { id: 'o_thought_orientation', label: "Thought Process/Content, Orientation", type: 'textarea',
+              placeholder: "e.g., Thought process: Logical. Oriented x4.",
+              suggestions: [
+                "Thought process appeared [e.g., logical, coherent, tangential, circumstantial, disorganized].",
+                "Thought content revealed [e.g., no evidence of delusions or hallucinations, preoccupation with X].",
+                "Client was alert and oriented to [person, place, time, situation - specify, e.g., x3, x4].",
+                "Cognitive functioning appeared [e.g., intact, impaired in X area].",
+                "Insight judged to be [e.g., good, fair, poor, limited].",
+                "Judgment appeared [e.g., good, fair, impaired]."
+              ]
+            }
         ]},
         { id: 'assessmentSection', title: 'A (Assessment)', fields: [
-            { id: 'a_summary_impressions', label: "Summary of Progress, Clinical Impressions, Response to Treatment", type: 'textarea', placeholder: "e.g., Making good progress with CBT. Symptoms of GAD appear reduced.", suggestions: ["Client appears to be making [e.g., good, some, limited] progress towards therapeutic goals.", "Clinical impressions are consistent with [diagnosis/working hypothesis, e.g., GAD, MDD, Adjustment Disorder].", "Client responded [e.g., positively, with difficulty] to interventions.", "Symptoms of [condition] appear to be [e.g., improving, worsening, stable].", "Current presentation suggests [summary statement]."] },
-            { id: 'a_strengths_challenges', label: "Client Strengths and Challenges/Barriers", type: 'textarea', placeholder: "e.g., Strengths: Motivated. Challenges: Limited social support.", suggestions: ["Client's strengths include [e.g., motivation, insight, strong support system, resilience].", "Identified challenges include [e.g., negative self-talk, difficulty with emotional regulation, lack of resources].", "Barriers to progress may include [barrier1, barrier2].", "Protective factors noted: [factor1, factor2]."] },
-            { id: 'a_risk_level_justification', label: "Risk Assessment (Level and Justification)", type: 'textarea', placeholder: "e.g., Low risk for self-harm, no active SI/HI, protective factors present.", suggestions: ["Risk of harm to self assessed as [e.g., low, moderate, high] due to [justification].", "Risk of harm to others assessed as [e.g., low, moderate, high] due to [justification].", "No current indicators of acute risk.", "Protective factors such as [factor1, factor2] mitigate risk.", "Risk factors include [factor1, factor2].", "Safety plan remains appropriate / was updated."] }
+            { id: 'a_summary_impressions', label: "Summary of Progress, Clinical Impressions, Response to Treatment", type: 'textarea',
+              placeholder: "e.g., Making good progress with CBT. Symptoms of GAD appear reduced.",
+              suggestions: [
+                "Client appears to be making [e.g., good, some, limited] progress towards therapeutic goals.",
+                "Clinical impressions are consistent with [diagnosis/working hypothesis, e.g., GAD, MDD, Adjustment Disorder].",
+                "Client responded [e.g., positively, with difficulty] to interventions.",
+                "Symptoms of [condition] appear to be [e.g., improving, worsening, stable].",
+                "Current presentation suggests [summary statement]."
+              ]
+            },
+            { id: 'a_strengths_challenges', label: "Client Strengths and Challenges/Barriers", type: 'textarea',
+              placeholder: "e.g., Strengths: Motivated. Challenges: Limited social support.",
+              suggestions: [
+                "Client's strengths include [e.g., motivation, insight, strong support system, resilience].",
+                "Identified challenges include [e.g., negative self-talk, difficulty with emotional regulation, lack of resources].",
+                "Barriers to progress may include [barrier1, barrier2].",
+                "Protective factors noted: [factor1, factor2]."
+              ]
+            },
+            { id: 'a_risk_level_justification', label: "Risk Assessment (Level and Justification)", type: 'textarea',
+              placeholder: "e.g., Low risk for self-harm, no active SI/HI, protective factors present.",
+              suggestions: [
+                "Risk of harm to self assessed as [e.g., low, moderate, high] due to [justification].",
+                "Risk of harm to others assessed as [e.g., low, moderate, high] due to [justification].",
+                "No current indicators of acute risk.",
+                "Protective factors such as [factor1, factor2] mitigate risk.",
+                "Risk factors include [factor1, factor2].",
+                "Safety plan remains appropriate / was updated."
+              ]
+            }
         ]},
         { id: 'planSection', title: 'P (Plan)', fields: [
-            { id: 'p_interventions_response', label: "Interventions Used This Session & Client's Response", type: 'textarea', placeholder: "e.g., Utilized psychoeducation on anxiety. Client was receptive.", suggestions: ["Interventions utilized this session included [e.g., CBT, MI, psychoeducation, supportive listening, problem-solving].", "Client was receptive to [intervention] and [describe response, e.g., actively participated, appeared to understand].", "Practiced [skill, e.g., grounding techniques, communication skills].", "Explored [topic, e.g., cognitive distortions related to X].", "Provided validation and support for [client's experience]."] },
-            { id: 'p_focus_homework', label: "Focus for Next Session, Homework Assigned", type: 'textarea', placeholder: "e.g., Next session: Review thought records. Homework: Complete daily mood log.", suggestions: ["Focus for next session will be to [e.g., review homework, explore X further, introduce Y skill].", "Homework assigned: [e.g., complete thought record, practice mindfulness daily, journal about X].", "Client agreed to [specific action before next session].", "No homework assigned this session."] },
-            { id: 'p_safety_referrals_appt', label: "Safety Planning, Referrals, Next Appointment", type: 'textarea', placeholder: "e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD.", suggestions: ["Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].", "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].", "Client to follow up with [specialist/service].", "Next appointment scheduled for [date] at [time].", "Continue weekly/bi-weekly sessions."] }
+            { id: 'p_interventions_response', label: "Interventions Used This Session & Client's Response", type: 'textarea',
+              placeholder: "e.g., Utilized psychoeducation on anxiety. Client was receptive.",
+              suggestions: [
+                "Interventions utilized this session included [e.g., CBT, MI, psychoeducation, supportive listening, problem-solving].",
+                "Client was receptive to [intervention] and [describe response, e.g., actively participated, appeared to understand].",
+                "Practiced [skill, e.g., grounding techniques, communication skills].",
+                "Explored [topic, e.g., cognitive distortions related to X].",
+                "Provided validation and support for [client's experience]."
+              ]
+            },
+            { id: 'p_focus_homework', label: "Focus for Next Session, Homework Assigned", type: 'textarea',
+              placeholder: "e.g., Next session: Review thought records. Homework: Complete daily mood log.",
+              suggestions: [
+                "Focus for next session will be to [e.g., review homework, explore X further, introduce Y skill].",
+                "Homework assigned: [e.g., complete thought record, practice mindfulness daily, journal about X].",
+                "Client agreed to [specific action before next session].",
+                "No homework assigned this session."
+              ]
+            },
+            { id: 'p_safety_referrals_appt', label: "Safety Planning, Referrals, Next Appointment", type: 'textarea',
+              placeholder: "e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD.",
+              suggestions: [
+                "Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].",
+                "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].",
+                "Client to follow up with [specialist/service].",
+                "Next appointment scheduled for [date] at [time].",
+                "Continue weekly/bi-weekly sessions."
+              ]
+            }
         ]}
     ];
 
+    // --- 2) Profession‐specific templates ---
     const professionTemplates = {
-      therapist: [...standardSections],  // clone your current array
+      therapist: [...standardSections],
       doctor: [
         {
           id: 'chiefComplaint', title: 'Chief Complaint', fields: [
             {
-              id: 'cc_statement',
-              label: 'Patient Statement',
-              type: 'textarea',
+              id: 'cc_statement', label: 'Patient Statement', type: 'textarea',
               placeholder: 'e.g. “I’ve had chest pain…”',
               suggestions: [
                 "Patient complains of [symptom] for [duration].",
@@ -112,19 +220,26 @@ document.addEventListener('DOMContentLoaded', () => {
               ]
             }
           ]
-        },
-        // … add PMHx, Meds, Exam, Plan, etc …
+        }
+        // … add PMHx, Meds, Exam, Plan as needed …
       ],
       dentist_osce: [
-        // grab fields from your “Template for OSCEs.docx”
+        // From Template for OSCEs.docx
         { id: 'cc',      title: 'Chief Complaint',  fields:[ /* … */ ] },
         { id: 'empathy', title: 'Empathy',           fields:[ /* … */ ] },
-        { id: 'shipt',   title: 'S-H-I-P-T',          fields:[ /* … */ ] },
-        // …and so on
-      ],
-      // you can add more: nurse, socialWorker, etc.
+        { id: 'shipt',   title: 'S-H-I-P-T',          fields:[ /* … */ ] }
+        // …and so on …
+      ]
     };
 
+    // --- 3) Swap template on Role change ---
+    professionSelect.addEventListener('change', () => {
+      standardSections = professionTemplates[professionSelect.value] || professionTemplates.therapist;
+      buildMasterData();
+      renderForm();
+      setupHelperPanelTabs();
+      initDensityControls();
+    });
     // All other JavaScript functions (generateUniqueId, showToast, template management, form rendering, downloads, suggestions, etc.)
     // remain the same as in the previous FULL CORRECTED JavaScript.
     // The key change is in `setupHelperPanelTabs` and ensuring event listeners are correctly attached to the new tab buttons.
@@ -375,42 +490,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const copyNoteButton = document.getElementById('copyNoteButton');
-    copyNoteButton.addEventListener('click', () => {
-      // reuse your download-note HTML builder, but copy instead of download
-      let htmlNote = `<html><head><meta charset="UTF-8"><title>SOAP Note</title>
-        <style>body{font-family:Arial,sans-serif;} h3{margin-top:1em;margin-bottom:0.5em;}
-               p{margin:0.2em 0;}</style>
-        </head><body>`;
-    
-      let contentAdded = false;
-      const uiSettings = loadUISettings();
-      masterSectionData.forEach(sectionMeta => {
-        if (uiSettings.sectionsVisible[sectionMeta.id] === false) return;
-        let sectionHtml = `<h3><strong>${sectionMeta.title}</strong></h3>`;
-        let anyField = false;
-        sectionMeta.fieldIds.forEach(fid => {
-          const field = masterFieldData[fid];
-          const val = document.getElementById(fid)?.value.trim();
-          if (val) {
-            anyField = true;
-            contentAdded = true;
-            sectionHtml += `<p><strong>${field.label}:</strong> ${val}</p>`;
-          }
-        });
-        if (anyField) htmlNote += sectionHtml;
-      });
-    
-      htmlNote += `</body></html>`;
-    
-      if (!contentAdded) return showToast("Nothing to copy.", "info");
-    
-      // Copy to clipboard
-      navigator.clipboard.writeText(htmlNote)
-        .then(() => showToast("Note copied! 📋", "success"))
-        .catch(() => showToast("Copy failed.", "error"));
-    });
-
     if (downloadDraftButton) { 
         downloadDraftButton.addEventListener('click', () => {
             const dataToSave = getFormData();
@@ -656,19 +735,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Initial Load ---
-    buildMasterData(); 
-    renderForm();      
-    setupHelperPanelTabs(); 
-    initDensityControls(); 
-    
-    const firstStandardFieldId = standardSections[0]?.fields[0]?.id;
-    if (firstStandardFieldId) {
-        const firstEl = document.getElementById(firstStandardFieldId);
-        if (firstEl) firstEl.focus(); 
-    }
-    if (!activeTextarea && customSuggestionModule) {
-        customSuggestionModule.style.display = 'none';
-        if(helperPanelSubtitle) helperPanelSubtitle.textContent = "For: (No field selected)";
-    }
-});
