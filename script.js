@@ -33,17 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionsHelperTabContent = document.getElementById('suggestionsHelperTabContent');
     const templateEditorHelperTabContent = document.getElementById('templateEditorHelperTabContent');
 
-    const professionSelect = document.getElementById('professionSelect');
-    professionSelect.addEventListener('change', () => {
-      // 1) swap in the chosen template (falls back to therapist)
-      standardSections = professionTemplates[professionSelect.value] || professionTemplates.therapist;
-      // 2) rebuild & rerender the form
-      buildMasterData();
-      renderForm();
-      setupHelperPanelTabs();   // re-attach tab logic if needed
-      initDensityControls();    // re-apply UI settings
-    });
-
     // --- State & Keys ---
     let activeTextarea = null;
     let toastTimeout; 
@@ -56,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let masterFieldData = {}; 
     let masterSectionData = [];
 
-    let standardSections = [ /* ... Full standardSections array as previously provided ... */ 
+    const standardSections = [ /* ... Full standardSections array as previously provided ... */ 
         { id: 'generalInfoSection', title: 'General Information', fields: [
             { id: 'gi_date', label: 'Date', type: 'text', placeholder: 'YYYY-MM-DD', suggestions: ["Today's date: " + new Date().toISOString().slice(0,10), "Date of session: "] },
             { id: 'gi_client_id', label: 'Client ID / Name', type: 'text', placeholder: 'e.g., 12345 or Initials', suggestions: ["Client ID: ", "Client Initials: "] },
@@ -83,47 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'p_safety_referrals_appt', label: "Safety Planning, Referrals, Next Appointment", type: 'textarea', placeholder: "e.g., Safety plan reviewed. No new referrals. Next appt: YYYY-MM-DD.", suggestions: ["Safety plan was reviewed and [e.g., remains appropriate, was updated to include X].", "Referral to [e.g., psychiatrist, support group, dietician] was [e.g., discussed, made, declined by client].", "Client to follow up with [specialist/service].", "Next appointment scheduled for [date] at [time].", "Continue weekly/bi-weekly sessions."] }
         ]}
     ];
-
-    const professionTemplates = {
-      therapist: [...standardSections],  // clone your current array
-      doctor: [
-        {
-          id: 'chiefComplaint', title: 'Chief Complaint', fields: [
-            {
-              id: 'cc_statement',
-              label: 'Patient Statement',
-              type: 'textarea',
-              placeholder: 'e.g. “I’ve had chest pain…”',
-              suggestions: [
-                "Patient complains of [symptom] for [duration].",
-                "Onset was [when], character is [quality]."
-              ]
-            }
-          ]
-        },
-        {
-          id: 'history', title: 'History of Present Illness', fields: [
-            {
-              id: 'hpi', label: 'HPI Details', type: 'textarea',
-              placeholder: 'Detail the story of present illness…',
-              suggestions: [
-                "Symptoms started [timeframe] after [event].",
-                "Aggravating factors: [list]. Relieving factors: [list]."
-              ]
-            }
-          ]
-        },
-        // … add PMHx, Meds, Exam, Plan, etc …
-      ],
-      dentist_osce: [
-        // grab fields from your “Template for OSCEs.docx”
-        { id: 'cc',      title: 'Chief Complaint',  fields:[ /* … */ ] },
-        { id: 'empathy', title: 'Empathy',           fields:[ /* … */ ] },
-        { id: 'shipt',   title: 'S-H-I-P-T',          fields:[ /* … */ ] },
-        // …and so on
-      ],
-      // you can add more: nurse, socialWorker, etc.
-    };
 
     // All other JavaScript functions (generateUniqueId, showToast, template management, form rendering, downloads, suggestions, etc.)
     // remain the same as in the previous FULL CORRECTED JavaScript.
@@ -374,43 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Note downloaded!", "success");
         });
     }
-
-    const copyNoteButton = document.getElementById('copyNoteButton');
-    copyNoteButton.addEventListener('click', () => {
-      // reuse your download-note HTML builder, but copy instead of download
-      let htmlNote = `<html><head><meta charset="UTF-8"><title>SOAP Note</title>
-        <style>body{font-family:Arial,sans-serif;} h3{margin-top:1em;margin-bottom:0.5em;}
-               p{margin:0.2em 0;}</style>
-        </head><body>`;
-    
-      let contentAdded = false;
-      const uiSettings = loadUISettings();
-      masterSectionData.forEach(sectionMeta => {
-        if (uiSettings.sectionsVisible[sectionMeta.id] === false) return;
-        let sectionHtml = `<h3><strong>${sectionMeta.title}</strong></h3>`;
-        let anyField = false;
-        sectionMeta.fieldIds.forEach(fid => {
-          const field = masterFieldData[fid];
-          const val = document.getElementById(fid)?.value.trim();
-          if (val) {
-            anyField = true;
-            contentAdded = true;
-            sectionHtml += `<p><strong>${field.label}:</strong> ${val}</p>`;
-          }
-        });
-        if (anyField) htmlNote += sectionHtml;
-      });
-    
-      htmlNote += `</body></html>`;
-    
-      if (!contentAdded) return showToast("Nothing to copy.", "info");
-    
-      // Copy to clipboard
-      navigator.clipboard.writeText(htmlNote)
-        .then(() => showToast("Note copied! 📋", "success"))
-        .catch(() => showToast("Copy failed.", "error"));
-    });
-
     if (downloadDraftButton) { 
         downloadDraftButton.addEventListener('click', () => {
             const dataToSave = getFormData();
